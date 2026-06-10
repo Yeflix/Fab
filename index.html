@@ -516,34 +516,34 @@
       aria-label="Cerrar">✕</button>
     <img alt="Recuerdo en grande">
   </div>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics-compat.js"></script>
+
+  <script>
+    // Configuración de tu aplicación web de Firebase
+    const firebaseConfig = {
+      apiKey: "AIzaSyDibh--QSXK0srv_T2jKwCrMqocb-k6gfc",
+      authDomain: "fbpd-83d58.firebaseapp.com",
+      projectId: "fbpd-83d58",
+      storageBucket: "fbpd-83d58.firebasestorage.app",
+      messagingSenderId: "643833489569",
+      appId: "1:643833489569:web:7e37e084bd952aee5868e0",
+      measurementId: "G-N072MV4R17"
+    };
+
+    // 1. Inicializar Firebase globalmente
+    firebase.initializeApp(firebaseConfig);
+
+    // 2. Inicializar Analytics (opcional)
+    firebase.analytics();
+
+    // 3. Inicializar Firestore y asignarlo a window._db para que script.js lo reconozca
+    window._db = firebase.firestore();
+  </script>
+
+  <script src="./script.js"></script>
 
 </body>
-<script src="./script.js"></script>
-<!-- ── Firebase SDK ── -->
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script type="module">
-  // Import the functions you need from the SDKs you need
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
-  import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-analytics.js";
-  // TODO: Add SDKs for Firebase products that you want to use
-  // https://firebase.google.com/docs/web/setup#available-libraries
-
-  // Your web app's Firebase configuration
-  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
-  const firebaseConfig = {
-    apiKey: "AIzaSyDibh--QSXK0srv_T2jKwCrMqocb-k6gfc",
-    authDomain: "fbpd-83d58.firebaseapp.com",
-    projectId: "fbpd-83d58",
-    storageBucket: "fbpd-83d58.firebasestorage.app",
-    messagingSenderId: "643833489569",
-    appId: "1:643833489569:web:7e37e084bd952aee5868e0",
-    measurementId: "G-N072MV4R17"
-  };
-
-  // Initialize Firebase
-  const app = initializeApp(firebaseConfig);
-  const analytics = getAnalytics(app);
-</script>
 
 </html>
