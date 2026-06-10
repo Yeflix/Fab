@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>✦ Un Viaje entre Estrellas</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+
+<body>
+
+  <audio id="bgMusic" preload="auto"></audio>
+
+  <div id="music-selector-overlay" class="music-overlay">
+    <div class="gate-card music-card">
+      <h2>SINTONIZACIÓN SINFÓNICA</h2>
+      <p>
+        Selecciona la frecuencia melódica con la que deseas iniciar tu travesía por el cosmos. La melodía restante se
+        acoplará en secuencia al finalizar la primera.
+      </p>
+      <div class="music-btn-group">
+        <button class="btn small" onclick="selectInitialSong(0)">
+          ✦ Exogenesis Symphony Part 3
+        </button>
+        <button class="btn small" onclick="selectInitialSong(1)">
+          ✦ Neutron Star Collision (Love is Forever)
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <canvas id="bgCanvas"></canvas>
+
+  <!-- TOP BAR / HUD -->
+  <div id="topbar" class="hidden">
+    <div class="hud-left">
+      <button class="icon-btn" id="btn-home" title="Menú principal">⌂</button>
+      <button class="icon-btn" id="btn-map" title="Mapa estelar">✦</button>
+    </div>
+    <div class="hud-progress" id="hud-progress" style="display:none">
+      <span class="lbl" id="hud-lbl">Fase 0/3</span>
+      <div class="bar-wrap">
+        <div class="bar-fill" id="hud-bar"></div>
+      </div>
+      <span class="hud-stars" id="hud-stars">★ 0</span>
+    </div>
+    <div class="hud-right">
+      <button class="icon-btn" id="btn-mute" title="Sonido">🔊</button>
+      <button class="icon-btn" id="btn-settings" title="Ajustes">⚙</button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+  <div class="ach-pop" id="ach-pop">
+    <div class="ico">🏆</div>
+    <div>
+      <div class="t1">Logro desbloqueado</div>
+      <div class="t2" id="ach-pop-name">—</div>
+    </div>
+  </div>
+
+  <!-- BLACK HOLE TRANSITION -->
+  <div id="blackhole-overlay">
+    <div class="bh-core">
+      <div class="bh-event"></div>
+      <div class="bh-disk"></div>
+      <div class="bh-disk"></div>
+      <div class="bh-disk"></div>
+    </div>
+  </div>
+
+  <!-- SUPERNOVA OVERLAY -->
+  <div id="supernova-overlay">
+    <div class="sn-core"></div>
+    <div class="sn-ring"></div>
+    <div class="sn-ring"></div>
+    <div class="sn-ring"></div>
+  </div>
+
+  <!-- GATE OVERLAY (Phase 3 secret key) -->
+  <div id="gate-overlay" role="dialog" aria-modal="true" aria-labelledby="gate-title">
+    <div class="gate-card">
+      <div class="gate-orb"></div>
+      <h2 id="gate-title" class="gate-title">SINGULARIDAD SELLADA</h2>
+      <p class="gate-sub">Antes de cruzar el horizonte de eventos hacia la <em>Supernova del corazón</em>,<br>pronuncia
+        la clave que solo <strong>Yefferson</strong> conoce.</p>
+      <input type="password" class="gate-input" id="gate-input" placeholder="• • • • • • •" autocomplete="off"
+        spellcheck="false" maxlength="64">
+      <div class="gate-msg" id="gate-msg"></div>
+      <div class="gate-actions">
+        <button class="btn small ghost" onclick="closeGate()">CANCELAR</button>
+        <button class="btn small" id="gate-submit" onclick="submitGate()">DESBLOQUEAR ✦</button>
+      </div>
+      <p class="gate-hint">La luz más brillante exige la palabra más cuidada.</p>
+    </div>
+  </div>
+
+  <!-- WELCOME OVERLAY (first visit / manual open) -->
+  <div id="welcome-overlay" role="dialog" aria-modal="true" aria-labelledby="welcome-title"
+    style="position:fixed; inset:0; z-index:250; display:none; align-items:center; justify-content:center; padding:1rem; background:radial-gradient(circle at center, rgba(20,10,40,.85), rgba(0,0,0,.96)); backdrop-filter:blur(10px)">
+    <div class="gate-card" style="max-width:480px; text-align:left">
+      <div class="gate-orb" style="margin:0 auto 1rem"></div>
+      <h2 id="welcome-title" class="gate-title" style="text-align:center">BIENVENIDO A UN VIAJE ESTELAR</h2>
+      <p class="gate-sub" style="text-align:center">Un viaje íntimo entre estrellas, ecuaciones y recuerdos.</p>
+      <div
+        style="margin:1.1rem 0 .4rem; display:flex; flex-direction:column; gap:.85rem; font-size:.85rem; line-height:1.55; color:#e9e3d6">
+        <div style="display:flex; gap:.7rem; align-items:flex-start">
+          <span style="font-size:1.2rem; line-height:1">✦</span>
+          <div><strong style="color:var(--gold-bright)">La experiencia</strong><br><span style="opacity:.85">Recorre 3
+              fases conectadas por una constelación. Avanza a tu ritmo — cada estrella revela una parte de la
+              historia.</span></div>
+        </div>
+        <div style="display:flex; gap:.7rem; align-items:flex-start">
+          <span style="font-size:1.2rem; line-height:1">💾</span>
+          <div><strong style="color:var(--gold-bright)">Memoria &amp; recuerdos</strong><br><span style="opacity:.85">Tu
+              progreso, fotos subidas y logros se guardan automáticamente en este dispositivo. Vuelve cuando quieras
+              desde <em>CONTINUAR</em> o revisa la <em>GALERÍA</em>.</span></div>
+        </div>
+        <div style="display:flex; gap:.7rem; align-items:flex-start">
+          <span style="font-size:1.2rem; line-height:1">∑</span>
+          <div><strong style="color:var(--gold-bright)">Ecuaciones</strong><br><span style="opacity:.85">En la Fase 2
+              resolverás pequeñas ecuaciones que desbloquean letras del acróstico. Toca cada planeta, escribe el
+              resultado y observa cómo se forma su nombre.</span></div>
+        </div>
+        <div style="display:flex; gap:.7rem; align-items:flex-start">
+          <span style="font-size:1.2rem; line-height:1">⚙</span>
+          <div><strong style="color:var(--gold-bright)">Ajustes</strong><br><span style="opacity:.85">Desde el engranaje
+              arriba a la derecha puedes cambiar calidad gráfica, sonido o reducir animaciones si vas en móvil.</span>
+          </div>
+        </div>
+      </div>
+      <div class="gate-actions" style="margin-top:1rem; justify-content:center">
+        <button class="btn small" onclick="closeWelcome()">COMENZAR EL VIAJE ✦</button>
+      </div>
+      <p class="gate-hint" style="text-align:center">Puedes volver a ver esta guía desde <em>Ajustes → Ver guía</em>.
+      </p>
+    </div>
+  </div>
+
+  <div id="app">
+
+    <!-- MENU / PORTAL -->
+    <div class="screen active" id="menu-screen">
+      <div class="constellation-hint">✧ · · ✦ · · ✧</div>
+      <h1 class="cosmic-title">Ф а б и о л а</h1>
+      <p class="subtitle">Un viaje entre estrellas, ecuaciones y recuerdos</p>
+      <div class="menu-stack">
+        <button class="btn menu-btn phase-nav" id="btn-continue" style="display:none" onclick="continueGame()">CONTINUAR
+          ✦</button>
+        <button class="btn menu-btn" id="btn-new" onclick="newGame()">COMENZAR ✦</button>
+        <button class="btn menu-btn small ghost" onclick="showScreen('extras-screen')">JUEGOS &amp; EXTRAS ✦</button>
+        <button class="btn menu-btn small ghost" onclick="showScreen('gallery-screen', renderGallery)">GALERÍA
+          ✦</button>
+        <button class="btn menu-btn small ghost" onclick="showScreen('progress-screen', renderProgress)">PROGRESO &amp;
+          LOGROS</button>
+        <button class="btn menu-btn small ghost"
+          onclick="showScreen('settings-screen', renderSettings)">AJUSTES</button>
+        <button class="btn menu-btn small ghost" onclick="showScreen('credits-screen')">CRÉDITOS</button>
+      </div>
+      <p class="menu-foot">Solo tú puedes completar este camino · YefriDev</p>
+    </div>
+
+    <!-- GALLERY (v2: upload + edit + delete) -->
+    <div class="screen" id="gallery-screen">
+      <div class="constellation-hint">✧ GALERÍA ESTELAR ✧</div>
+      <h2 class="map-title" style="margin-bottom:.3rem">Nuestros Recuerdos</h2>
+      <p class="map-sub">Una constelación de momentos guardados en este dispositivo.</p>
+      <div class="gal-toolbar">
+        <label class="btn small file-btn">
+          SUBIR FOTOS
+          <input type="file" id="gal-upload" accept="image/*" multiple>
+        </label>
+        <button class="btn small ghost" id="gal-edit-btn" onclick="toggleGalleryEdit()">EDITAR</button>
+        <button class="btn small ghost" onclick="clearUploadedGallery()"
+          style="border-color:rgba(192,96,96,.5);color:#e89090">LIMPIAR SUBIDAS</button>
+      </div>
+      <div class="gallery-grid" id="gallery-grid"></div>
+      <button class="btn small ghost" style="margin-top:.8rem" onclick="showScreen('menu-screen')">← VOLVER AL
+        MENÚ</button>
+    </div>
+
+    <!-- EXTRAS HUB (v2: 3 cards, refreshed) -->
+    <div class="screen" id="extras-screen">
+      <div class="constellation-hint">✦ JUEGOS &amp; EXTRAS ✦</div>
+      <h2 class="map-title">Tu universo personal</h2>
+      <p class="map-sub">Dibuja constelaciones reales, comparte postales estelares o cuida tu galería.</p>
+      <div class="hub-grid">
+        <div class="hub-card" onclick="showScreen('draw-screen', initDrawScreen)">
+          <span class="pill">15 constelaciones</span>
+          <span class="ico">✦</span>
+          <h3>Modo Dibujo</h3>
+          <p>Conecta estrellas para revelar constelaciones reales del firmamento. Tu progreso se guarda.</p>
+        </div>
+        <div class="hub-card" onclick="showScreen('share-screen', initShareScreen)">
+          <span class="pill">Postal 9:16</span>
+          <span class="ico">💌</span>
+          <h3>Comparte tu Constelación</h3>
+          <p>Genera una imagen lista para WhatsApp o Instagram con tu mensaje y la constelación que elijas.</p>
+        </div>
+        <div class="hub-card" onclick="showScreen('gallery-screen', renderGallery)">
+          <span class="pill">Local</span>
+          <span class="ico">🖼</span>
+          <h3>Galería de Fotos</h3>
+          <p>Sube imágenes, añade descripciones y revive momentos. Todo guardado en tu dispositivo.</p>
+        </div>
+      </div>
+      <button class="btn small ghost" style="margin-top:1.4rem" onclick="showScreen('menu-screen')">← VOLVER AL
+        MENÚ</button>
+    </div>
+
+    <!-- DRAW MODE -->
+    <div class="screen" id="draw-screen">
+      <div class="constellation-hint">✧ MODO DIBUJO ✧</div>
+      <h2 class="map-title" style="margin-bottom:.3rem">Dibuja la Constelación</h2>
+      <p class="map-sub">Toca dos estrellas para unirlas. Sigue el orden correcto para completarla.</p>
+      <div class="draw-header">
+        <span class="draw-name" id="draw-name">—</span>
+        <span class="draw-progress" id="draw-progress">0/0</span>
+      </div>
+      <div class="draw-wrap" id="draw-wrap">
+        <canvas class="draw-bgcanvas" id="draw-bgcanvas"></canvas>
+        <svg class="draw-svg" id="draw-svg" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">
+          <defs>
+            <filter id="starGlow" x="-200%" y="-200%" width="500%" height="500%">
+              <feGaussianBlur stdDeviation="1.2" result="blur" />
+              <feMerge>
+                <feMergeNode in="blur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+            <filter id="lineGlow" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur stdDeviation=".55" result="b" />
+              <feMerge>
+                <feMergeNode in="b" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+            <linearGradient id="lineGrad" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="var(--gold-bright)" stop-opacity=".95" />
+              <stop offset="50%" stop-color="var(--gold)" stop-opacity=".9" />
+              <stop offset="100%" stop-color="var(--gold-soft)" stop-opacity=".75" />
+            </linearGradient>
+            <linearGradient id="hintGrad" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="var(--accent)" stop-opacity=".9" />
+              <stop offset="100%" stop-color="var(--accent2)" stop-opacity=".7" />
+            </linearGradient>
+            <radialGradient id="haloW">
+              <stop offset="0%" stop-color="#fff" stop-opacity=".9" />
+              <stop offset="40%" stop-color="#cfe0ff" stop-opacity=".35" />
+              <stop offset="100%" stop-color="#cfe0ff" stop-opacity="0" />
+            </radialGradient>
+            <radialGradient id="haloB">
+              <stop offset="0%" stop-color="#cfe0ff" stop-opacity=".95" />
+              <stop offset="40%" stop-color="#7eaaff" stop-opacity=".4" />
+              <stop offset="100%" stop-color="#3a6acc" stop-opacity="0" />
+            </radialGradient>
+            <radialGradient id="haloY">
+              <stop offset="0%" stop-color="#fff4cf" stop-opacity=".95" />
+              <stop offset="40%" stop-color="#f0d590" stop-opacity=".45" />
+              <stop offset="100%" stop-color="#a07a30" stop-opacity="0" />
+            </radialGradient>
+            <radialGradient id="haloO">
+              <stop offset="0%" stop-color="#ffd9a8" stop-opacity=".95" />
+              <stop offset="40%" stop-color="#f0a060" stop-opacity=".45" />
+              <stop offset="100%" stop-color="#a04a10" stop-opacity="0" />
+            </radialGradient>
+            <radialGradient id="haloR">
+              <stop offset="0%" stop-color="#ffb8a0" stop-opacity=".95" />
+              <stop offset="40%" stop-color="#e06850" stop-opacity=".45" />
+              <stop offset="100%" stop-color="#8a2010" stop-opacity="0" />
+            </radialGradient>
+          </defs>
+          <g id="draw-lines"></g>
+          <g id="draw-stars"></g>
+          <g id="draw-labels"></g>
+          <line id="draw-preview" class="draw-line-preview" style="display:none" />
+        </svg>
+        <div class="draw-reveal" id="draw-reveal">
+          <div class="rv-name" id="draw-reveal-name">—</div>
+          <div class="rv-sub">constelación completada</div>
+        </div>
+      </div>
+      <p class="draw-meta" id="draw-meta">—</p>
+      <div class="draw-controls">
+        <button class="btn small" onclick="drawHint()">PISTA</button>
+        <button class="btn small ghost" onclick="drawReset()">REINICIAR</button>
+      </div>
+      <div class="draw-list" id="draw-list"></div>
+      <button class="btn small ghost" style="margin-top:1rem" onclick="showScreen('extras-screen')">← VOLVER</button>
+    </div>
+
+    <!-- SHARE CARD -->
+    <div class="screen" id="share-screen">
+      <div class="constellation-hint">✧ COMPARTE TU CONSTELACIÓN ✧</div>
+      <h2 class="map-title" style="margin-bottom:.3rem">Una postal entre estrellas</h2>
+      <p class="map-sub">Personaliza y envía tu mensaje cósmico.</p>
+      <div class="share-wrap">
+        <div class="share-controls">
+          <div>
+            <label>Constelación</label>
+            <select id="share-const" onchange="renderShareCard()"></select>
+            <small id="share-const-hint"
+              style="color:var(--text-soft);font-size:.72rem;display:block;margin-top:.3rem"></small>
+          </div>
+          <div>
+            <label>Nombre dedicado (debajo de la constelación)</label>
+            <input id="share-to" maxlength="40" placeholder="" oninput="renderShareCard()">
+          </div>
+          <div>
+            <label>Mensaje</label>
+            <textarea id="share-msg" maxlength="200"
+              oninput="renderShareCard()">Hay estrellas que solo brillan para ti.</textarea>
+          </div>
+          <div>
+            <label>De parte de</label>
+            <input id="share-from" maxlength="30" placeholder="— Tu nombre" oninput="renderShareCard()">
+          </div>
+          <div class="share-actions">
+            <button class="btn small" onclick="downloadShareCard()">DESCARGAR PNG</button>
+            <button class="btn small ghost" onclick="shareShareCard()">COMPARTIR</button>
+          </div>
+        </div>
+        <div class="share-canvas-wrap">
+          <canvas id="share-canvas" width="900" height="1600"></canvas>
+        </div>
+      </div>
+      <button class="btn small ghost" style="margin-top:1rem" onclick="showScreen('extras-screen')">← VOLVER</button>
+    </div>
+
+    <!-- CONSTELLATION MAP (HUB / LEVEL SELECT) -->
+    <div class="screen" id="map-screen">
+      <div class="constellation-hint">✧ MAPA ESTELAR ✧</div>
+      <h2 class="map-title">La Constelación de Фабиола</h2>
+      <p class="map-sub">Sigue el camino entre estrellas para llegar al destino.</p>
+      <div class="map-wrap" id="map-wrap">
+        <svg class="map-svg" id="map-svg" viewBox="0 0 1000 620" preserveAspectRatio="none"></svg>
+        <!-- Nodes are injected here -->
+      </div>
+      <div class="map-legend">
+        <span><span class="dot" style="background:radial-gradient(circle,#fff,var(--gold))"></span> Disponible</span>
+        <span><span class="dot" style="background:radial-gradient(circle,#fff,var(--success))"></span> Completada</span>
+        <span><span class="dot" style="background:#3a3a4e"></span> Bloqueada</span>
+        <span><span class="dot" style="background:radial-gradient(circle,#000 50%,#a060e0)"></span> Singularidad</span>
+      </div>
+      <button class="btn small ghost" style="margin-top:1.4rem" onclick="goHome()">← VOLVER AL MENÚ</button>
+    </div>
+
+    <!-- PROGRESS / ACHIEVEMENTS -->
+    <div class="screen" id="progress-screen">
+      <div class="panel">
+        <h2>Tu Progreso</h2>
+        <p class="sub">El registro de nuestro viaje a través de las estrellas.</p>
+        <div class="stat-row"><span>Fases completadas</span><span id="st-phases">0 / 3</span></div>
+        <div class="stat-row"><span>Palabras descifradas</span><span id="st-words">0 / 7</span></div>
+        <div class="stat-row"><span>Desafíos resueltos</span><span id="st-problems">0 / 4</span></div>
+        <div class="stat-row"><span>Estrellas ganadas</span><span id="st-stars">★ 0</span></div>
+        <div class="stat-row"><span>Logros</span><span id="st-ach">0 / 7</span></div>
+        <div class="ach-list" id="ach-list"></div>
+      </div>
+      <button class="btn small" style="margin-top:1.6rem" onclick="showScreen('menu-screen')">← VOLVER</button>
+    </div>
+
+    <!-- SETTINGS -->
+    <div class="screen" id="settings-screen">
+      <div class="panel">
+        <h2>Ajustes</h2>
+        <p class="sub">Optimiza la experiencia para tu dispositivo.</p>
+        <div class="setting-row">
+          <div class="label">Calidad gráfica <small>Reduce animaciones para mejor rendimiento</small></div>
+          <div class="seg" id="seg-quality">
+            <button data-q="low">Baja</button><button data-q="medium">Media</button><button data-q="high">Alta</button>
+          </div>
+        </div>
+        <div class="setting-row">
+          <div class="label">Efectos de sonido <small>Clics y chispas</small></div>
+          <button class="toggle on" id="tg-sound"></button>
+        </div>
+        <div class="setting-row">
+          <div class="label">Movimiento reducido <small>Menos animaciones de pantalla</small></div>
+          <button class="toggle" id="tg-motion"></button>
+        </div>
+        <div class="setting-row">
+          <div class="label">Tema de color <small>Elige la paleta que más te gusta</small></div>
+          <div class="theme-swatches" id="theme-swatches"></div>
+        </div>
+        <div class="setting-row">
+          <div class="label">Velocidad de animación <small>Ahorra batería bajándola</small></div>
+          <div class="slider-row">
+            <input type="range" id="anim-speed" min="0.3" max="1.5" step="0.05" value="1">
+            <span class="val" id="anim-speed-val">1.00x</span>
+          </div>
+        </div>
+        <div class="setting-row">
+          <div class="label">Música ambiente <small>Sube tu MP3 (máx 8 MB, guardado local)</small></div>
+          <div class="music-block">
+            <div class="mb-row">
+              <label class="btn small file-btn">SUBIR MP3<input type="file" id="music-upload" accept="audio/*"></label>
+              <button class="btn small ghost" id="music-toggle" onclick="toggleMusic()">▶</button>
+              <button class="btn small ghost" onclick="clearMusic()" title="Quitar">✕</button>
+            </div>
+            <div class="mb-row">
+              <input type="range" id="music-vol" min="0" max="1" step="0.05" value="0.6"
+                style="flex:1;accent-color:var(--gold)">
+              <span class="val" id="music-vol-val"
+                style="font-family:var(--font-mono);color:var(--gold-bright);font-size:.75rem;min-width:38px;text-align:right">60%</span>
+            </div>
+            <div class="music-name" id="music-name">— sin pista —</div>
+          </div>
+        </div>
+        <div class="setting-row" style="border-bottom:none">
+          <div class="label" style="color:var(--danger)">Borrar progreso guardado <small>No se puede deshacer</small>
+          </div>
+          <button class="btn small" style="border-color:var(--danger);color:var(--danger)"
+            onclick="wipeSave()">BORRAR</button>
+        </div>
+        <div class="setting-row" style="border-bottom:none">
+          <div class="label">Ver guía de bienvenida <small>Cómo funcionan memoria y ecuaciones</small></div>
+          <button class="btn small ghost" onclick="openWelcome()">VER GUÍA</button>
+        </div>
+      </div>
+      <button class="btn small" style="margin-top:1.6rem" onclick="showScreen('menu-screen')">← VOLVER</button>
+    </div>
+
+    <!-- CREDITS -->
+    <div class="screen" id="credits-screen">
+      <div class="panel">
+        <h2>Créditos</h2>
+        <p class="sub">Una carta interactiva entre el cosmos y el corazón.</p>
+        <div class="poem-display" style="font-size:.95rem">
+          la constante que da sentido a todas mis variables.
+          Tres fases, un destino:
+          las palabras, los desafíos y la verdad.
+          Gracias por existir en mi órbita.
+        </div>
+        <div class="stat-row"><span>Concepto y poemas</span><span>YefriDev</span></div>
+        <div class="stat-row" style="border-bottom:none"><span>Atajo secreto</span><span>Ctrl + Shift + K</span></div>
+      </div>
+      <button class="btn small" style="margin-top:1.6rem" onclick="showScreen('menu-screen')">← VOLVER</button>
+    </div>
+
+    <!-- PHASE 1 -->
+    <div class="screen" id="phase1-screen">
+      <div class="phase-indicator">
+        <div class="phase-dot active"></div>
+        <div class="phase-line"></div>
+        <div class="phase-dot"></div>
+        <div class="phase-line"></div>
+        <div class="phase-dot"></div>
+      </div>
+      <h2 class="phase-title">Fase I · El Alpha</h2>
+      <p class="muted-line">Completa las palabras de tu acrostico</p>
+      <p class="tiny-line">Cada letra descifrada enciende una estrella de tu constelación.</p>
+      <div class="p1-constellation" id="p1-constellation"></div>
+      <div class="acrostic-container" id="acrostic-container"></div>
+      <p class="muted-line" style="margin-top:1.6rem" id="progress-p1">0 de 7 completadas</p>
+      <div class="unlock-message" id="unlock-msg-p1"></div>
+      <button class="btn locked" id="btn-to-phase2" onclick="goToPhase2()" disabled>CONTINUAR A FASE II →</button>
+    </div>
+
+    <!-- PHASE 2 -->
+    <div class="screen" id="phase2-screen">
+      <div class="phase-indicator">
+        <div class="phase-dot completed"></div>
+        <div class="phase-line done"></div>
+        <div class="phase-dot active"></div>
+        <div class="phase-line"></div>
+        <div class="phase-dot"></div>
+      </div>
+      <h2 class="phase-title">Fase II · Los Desafíos</h2>
+      <p class="muted-line">Cuatro planetas orbitan tu mente. Conquístalos uno a uno.</p>
+      <p class="tiny-line">Cada problema requiere demostración rigurosa. Sube una foto clara de tu desarrollo
+        manuscrito.</p>
+      <div class="problems-container" id="problems-container"></div>
+      <p class="tiny-line" style="margin-top:1rem" id="upload-count-p2">0 de 4 problemas con imagen subida</p>
+      <button class="btn locked" id="btn-to-phase3" onclick="goToPhase3()" disabled>CONTINUAR A FASE III →</button>
+    </div>
+
+    <!-- PHASE 3 -->
+    <div class="screen" id="phase3-screen">
+      <div class="phase-indicator">
+        <div class="phase-dot completed"></div>
+        <div class="phase-line done"></div>
+        <div class="phase-dot completed"></div>
+        <div class="phase-line done"></div>
+        <div class="phase-dot active"></div>
+      </div>
+      <h2 class="phase-title">Fase III · El Omega</h2>
+      <p class="muted-line" style="color:var(--phase3)">Cuando las palabras finalmente encuentran su camino</p>
+      <div id="confession-stages"></div>
+      <div class="conf-nav" id="conf-nav" style="display:none">
+        <button class="btn small" id="btn-prev-stage" onclick="confPrev()">← Anterior</button>
+        <button class="btn small phase-nav" id="btn-next-stage" onclick="confNext()">Siguiente →</button>
+      </div>
+      <button class="btn" id="btn-finish" onclick="finishGame()" style="margin-top:1.6rem; display:none">VOLVER AL MENÚ
+        ✦</button>
+    </div>
+
+  </div>
+
+  <!-- LOADING -->
+  <div id="loading-screen">
+    <div class="loader-ring"></div>
+    <div class="loading-text" id="loading-msg">SINTONIZANDO FRECUENCIAS...</div>
+    <div class="loading-bar-container">
+      <div class="loading-bar" id="loading-bar"></div>
+    </div>
+  </div>
+
+  <!-- SCROLL HINT (aparece automáticamente cuando hay contenido por debajo) -->
+  <button id="scroll-hint" type="button" aria-label="Desplázate hacia abajo" title="Desplázate hacia abajo">▼</button>
+
+  <!-- GALLERY LIGHTBOX -->
+  <div class="gallery-lightbox" id="gallery-lightbox" onclick="closeLightbox()">
+    <button class="gl-close" type="button" onclick="event.stopPropagation();closeLightbox()"
+      aria-label="Cerrar">✕</button>
+    <img alt="Recuerdo en grande">
+  </div>
+
+</body>
+<script src="/script.js"></script>
+<!-- ── Firebase SDK ── -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script type="module">
+  // Import the functions you need from the SDKs you need
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
+  import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-analytics.js";
+  // TODO: Add SDKs for Firebase products that you want to use
+  // https://firebase.google.com/docs/web/setup#available-libraries
+
+  // Your web app's Firebase configuration
+  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+  const firebaseConfig = {
+    apiKey: "AIzaSyDibh--QSXK0srv_T2jKwCrMqocb-k6gfc",
+    authDomain: "fbpd-83d58.firebaseapp.com",
+    projectId: "fbpd-83d58",
+    storageBucket: "fbpd-83d58.firebasestorage.app",
+    messagingSenderId: "643833489569",
+    appId: "1:643833489569:web:7e37e084bd952aee5868e0",
+    measurementId: "G-N072MV4R17"
+  };
+
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+  const analytics = getAnalytics(app);
+</script>
+
+</html>
