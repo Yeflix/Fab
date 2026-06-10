@@ -101,12 +101,29 @@ h1, h2, h3, .hero-title, .gate-card h2, .poem-display, .confession-final,
 /* (2) HUD: mini-constelación de progreso + auto-hide */
 #topbar {
   transition: opacity 0.6s ease, transform 0.6s ease;
+  /* FIX: evita que .hud-right se envuelva y caiga arriba-izquierda en pantallas
+     estrechas. Con flex-wrap + space-between, un único item envuelto queda
+     pegado a la izquierda. Forzamos una sola fila y empujamos hud-right a la derecha. */
+  flex-wrap: nowrap !important;
 }
+.hud-left  { margin-right: auto; }
+.hud-right { margin-left:  auto; }
+/* En pantallas muy estrechas ocultamos la barra de progreso clásica para
+   que los iconos no se solapen (la constelación ya cumple ese rol). */
+@media (max-width: 380px) {
+  .hud-progress { padding: .15rem .35rem; }
+  .hud-progress .lbl { display: none; }
+}
+
 #topbar.auto-hidden {
   opacity: 0.15;
   transform: translateY(-8px);
 }
 #topbar.auto-hidden:hover { opacity: 1; transform: translateY(0); }
+
+/* Defensa extra: garantiza que en el menú principal el topbar nunca se vea
+   aunque algún script externo intente quitarle la clase .hidden. */
+body:has(#menu-screen.active) #topbar { display: none !important; }
 
 .hud-progress .bar-wrap { display: none !important; } /* ocultamos barra clásica */
 .hud-constellation {
