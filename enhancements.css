@@ -1,0 +1,307 @@
+/* ════════════════════════════════════════════════════════════════════
+   ENHANCEMENTS LAYER · Visualización 1-6 + Estrategia Fase III
+   Capa aditiva: NO modifica style.css. Sobrescribe por especificidad.
+   ════════════════════════════════════════════════════════════════════ */
+
+:root {
+  --font-display: 'Cormorant Garamond', 'Georgia', serif;
+  --font-ui: 'Inter', system-ui, sans-serif;
+
+  /* Atmósfera por fase (se aplica vía data-phase en <body>) */
+  --phase-color: var(--gold);
+  --phase-glow: rgba(212, 165, 116, 0.45);
+  --phase-nebula-a: rgba(40, 28, 70, .35);
+  --phase-nebula-b: rgba(70, 26, 48, .28);
+  --phase-nebula-c: rgba(24, 46, 70, .25);
+}
+
+body[data-phase="1"] {
+  --phase-color: var(--phase1);
+  --phase-glow: rgba(139, 180, 208, 0.45);
+  --phase-nebula-a: rgba(42, 91, 138, .38);
+  --phase-nebula-b: rgba(40, 28, 70, .30);
+  --phase-nebula-c: rgba(20, 50, 90, .28);
+}
+body[data-phase="2"] {
+  --phase-color: var(--phase2);
+  --phase-glow: rgba(212, 184, 138, 0.50);
+  --phase-nebula-a: rgba(120, 80, 30, .35);
+  --phase-nebula-b: rgba(70, 26, 48, .25);
+  --phase-nebula-c: rgba(90, 60, 20, .25);
+}
+body[data-phase="3"] {
+  --phase-color: var(--phase3);
+  --phase-glow: rgba(212, 160, 176, 0.55);
+  --phase-nebula-a: rgba(138, 58, 91, .40);
+  --phase-nebula-b: rgba(91, 58, 138, .32);
+  --phase-nebula-c: rgba(70, 26, 70, .28);
+}
+
+/* (1) Nebulosa de fondo dinámica que muta con la fase */
+body::before {
+  background:
+    radial-gradient(60% 50% at 25% 30%, var(--phase-nebula-a), transparent 70%),
+    radial-gradient(55% 50% at 75% 60%, var(--phase-nebula-b), transparent 70%),
+    radial-gradient(45% 45% at 50% 80%, var(--phase-nebula-c), transparent 70%) !important;
+  transition: background 1.6s ease;
+}
+
+/* (5) Tipografía cósmica-poética */
+body { font-family: var(--font-ui); letter-spacing: 0.005em; }
+h1, h2, h3, .hero-title, .gate-card h2, .poem-display, .confession-final,
+.flashback-quote, #pi-title, .ach-pop .t1 {
+  font-family: var(--font-display) !important;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+.problem-text, .acrostic-clue, .hint-text { font-family: var(--font-display) !important; font-weight: 500; }
+.btn, .icon-btn, .hud-progress .lbl, .hud-stars { font-family: var(--font-ui) !important; }
+/* Mejor contraste para texto secundario */
+:root { --text-soft: #cfc6bc; }
+
+/* (1) Cinematic intro overlay por fase */
+#phase-intro-overlay {
+  position: fixed; inset: 0; z-index: 9000;
+  display: none; align-items: center; justify-content: center;
+  background: radial-gradient(60% 60% at 50% 50%, rgba(0,0,0,0.85), rgba(0,0,0,0.98));
+  opacity: 0; pointer-events: none;
+}
+#phase-intro-overlay.show { display: flex; animation: pi-fade 3.6s ease forwards; pointer-events: all; }
+@keyframes pi-fade {
+  0% { opacity: 0; }
+  15% { opacity: 1; }
+  80% { opacity: 1; }
+  100% { opacity: 0; }
+}
+.pi-inner { text-align: center; padding: 2rem; max-width: 90vw; }
+.pi-eyebrow {
+  font-family: var(--font-ui); font-weight: 600;
+  font-size: 0.85rem; letter-spacing: 0.5em; color: var(--phase-color);
+  margin-bottom: 1.5rem; opacity: 0; animation: pi-up 1.2s ease 0.3s forwards;
+}
+.pi-title {
+  font-family: var(--font-display); font-weight: 600;
+  font-size: clamp(2.4rem, 7vw, 4.5rem); color: var(--text);
+  text-shadow: 0 0 32px var(--phase-glow);
+  opacity: 0; animation: pi-up 1.4s ease 0.7s forwards;
+}
+.pi-sub {
+  font-family: var(--font-display); font-style: italic;
+  font-size: clamp(1rem, 2.2vw, 1.3rem); color: var(--text-soft);
+  margin-top: 1rem; opacity: 0; animation: pi-up 1.4s ease 1.2s forwards;
+}
+.pi-rule {
+  width: 0; height: 1px; margin: 2rem auto 0;
+  background: linear-gradient(90deg, transparent, var(--phase-color), transparent);
+  animation: pi-rule 1.2s ease 1.6s forwards;
+}
+@keyframes pi-up { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes pi-rule { to { width: min(420px, 70vw); } }
+
+/* (2) HUD: mini-constelación de progreso + auto-hide */
+#topbar {
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+#topbar.auto-hidden {
+  opacity: 0.15;
+  transform: translateY(-8px);
+}
+#topbar.auto-hidden:hover { opacity: 1; transform: translateY(0); }
+
+.hud-progress .bar-wrap { display: none !important; } /* ocultamos barra clásica */
+.hud-constellation {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 0 8px; min-width: 60px;
+}
+.hud-constellation .hc-dot {
+  width: 9px; height: 9px; border-radius: 50%;
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.18);
+  position: relative; transition: all 0.5s ease;
+}
+.hud-constellation .hc-dot.done {
+  background: var(--phase-color);
+  border-color: var(--phase-color);
+  box-shadow: 0 0 10px var(--phase-glow), 0 0 18px var(--phase-glow);
+}
+.hud-constellation .hc-dot.current {
+  animation: hc-pulse 1.6s ease-in-out infinite;
+  border-color: var(--phase-color);
+}
+.hud-constellation .hc-link {
+  width: 10px; height: 1px;
+  background: linear-gradient(90deg, rgba(255,255,255,0.08), rgba(255,255,255,0.22), rgba(255,255,255,0.08));
+}
+.hud-constellation .hc-dot.done + .hc-link {
+  background: linear-gradient(90deg, var(--phase-color), var(--phase-glow), var(--phase-color));
+  box-shadow: 0 0 6px var(--phase-glow);
+}
+@keyframes hc-pulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 4px var(--phase-glow); }
+  50% { transform: scale(1.35); box-shadow: 0 0 14px var(--phase-glow); }
+}
+
+/* HUD elementos refuerzan color de fase */
+.hud-progress .lbl { color: var(--phase-color); text-shadow: 0 0 6px var(--phase-glow); }
+.hud-stars { color: var(--phase-color) !important; }
+.icon-btn:hover { color: var(--phase-color); text-shadow: 0 0 8px var(--phase-glow); }
+
+/* (3) Feedback enriquecido: shake + destello + chispas */
+@keyframes fx-shake {
+  0%, 100% { transform: translateX(0); }
+  15% { transform: translateX(-8px); }
+  30% { transform: translateX(7px); }
+  45% { transform: translateX(-5px); }
+  60% { transform: translateX(4px); }
+  75% { transform: translateX(-2px); }
+}
+.fx-shake { animation: fx-shake 0.5s ease; }
+.fx-error-flash {
+  position: relative;
+}
+.fx-error-flash::after {
+  content: ''; position: absolute; inset: -4px; border-radius: inherit;
+  background: radial-gradient(circle, rgba(192,96,96,0.5), transparent 70%);
+  pointer-events: none; animation: fx-flash 0.6s ease forwards;
+}
+@keyframes fx-flash {
+  0% { opacity: 0; }
+  20% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+.fx-success-pulse {
+  animation: fx-success 0.9s ease;
+  box-shadow: 0 0 0 0 var(--phase-glow);
+}
+@keyframes fx-success {
+  0% { box-shadow: 0 0 0 0 var(--phase-glow); }
+  50% { box-shadow: 0 0 0 14px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+
+/* chispas doradas */
+.fx-spark {
+  position: fixed; width: 6px; height: 6px; border-radius: 50%;
+  background: var(--phase-color); pointer-events: none; z-index: 9500;
+  box-shadow: 0 0 10px var(--phase-glow), 0 0 20px var(--phase-glow);
+  animation: fx-spark-fly 0.9s ease-out forwards;
+}
+@keyframes fx-spark-fly {
+  0% { opacity: 1; transform: translate(0,0) scale(1); }
+  100% { opacity: 0; transform: translate(var(--dx,0), var(--dy,-40px)) scale(0.2); }
+}
+
+/* (4) Mapa estelar como hub real: estrellas + líneas + hover preview */
+#map-screen .map-canvas, #map-screen .map-wrap { position: relative; }
+.map-link-svg {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  pointer-events: none; z-index: 0;
+}
+.map-link-svg line {
+  stroke: rgba(255,255,255,0.10);
+  stroke-width: 1; stroke-dasharray: 4 6;
+  transition: stroke 0.6s ease, stroke-width 0.6s ease;
+}
+.map-link-svg line.lit {
+  stroke: var(--phase-color);
+  stroke-width: 1.6;
+  filter: drop-shadow(0 0 6px var(--phase-glow));
+  stroke-dasharray: none;
+  animation: map-link-glow 3.2s ease-in-out infinite;
+}
+@keyframes map-link-glow {
+  0%,100% { opacity: 0.55; }
+  50% { opacity: 1; }
+}
+.map-node-preview {
+  position: absolute; pointer-events: none;
+  background: linear-gradient(180deg, rgba(13,13,36,0.96), rgba(4,4,12,0.96));
+  border: 1px solid var(--phase-color);
+  border-radius: 10px; padding: 10px 14px;
+  font-family: var(--font-ui); font-size: 0.82rem; color: var(--text);
+  box-shadow: 0 8px 28px rgba(0,0,0,0.6), 0 0 18px var(--phase-glow);
+  transform: translate(-50%, calc(-100% - 16px));
+  white-space: nowrap; z-index: 10;
+  opacity: 0; transition: opacity 0.25s ease;
+}
+.map-node-preview.show { opacity: 1; }
+.map-node-preview .mnp-title { font-family: var(--font-display); font-size: 1rem; color: var(--phase-color); margin-bottom: 4px; }
+.map-node-preview .mnp-meta { color: var(--text-soft); }
+
+/* (6) Performance + accesibilidad */
+@media (prefers-reduced-motion: reduce) {
+  #phase-intro-overlay,
+  .pi-eyebrow, .pi-title, .pi-sub, .pi-rule,
+  .hud-constellation .hc-dot.current,
+  .map-link-svg line.lit,
+  .fx-spark, .fx-shake, .fx-success-pulse {
+    animation: none !important;
+    transition: none !important;
+  }
+  #phase-intro-overlay.show { opacity: 1; animation: none; }
+}
+body[data-quality="low"] .hud-constellation .hc-dot { box-shadow: none !important; }
+body[data-quality="low"] .map-link-svg line.lit { filter: none !important; animation: none !important; }
+body[data-quality="low"] #phase-intro-overlay { animation-duration: 2s !important; }
+
+/* ───────────── ESTRATEGIA FASE III · Preámbulo lento ───────────── */
+#phase3-preamble {
+  position: fixed; inset: 0; z-index: 9100;
+  display: none; align-items: center; justify-content: center;
+  background:
+    radial-gradient(40% 50% at 50% 50%, rgba(138, 58, 91, .25), transparent 70%),
+    radial-gradient(70% 70% at 50% 50%, rgba(8,4,16,0.94), rgba(0,0,0,0.99));
+  opacity: 0; transition: opacity 1.2s ease;
+}
+#phase3-preamble.show { display: flex; opacity: 1; }
+.p3p-stars {
+  position: absolute; inset: 0; pointer-events: none;
+  background-image:
+    radial-gradient(1px 1px at 20% 30%, rgba(255,255,255,0.7), transparent),
+    radial-gradient(1px 1px at 75% 65%, rgba(255,255,255,0.6), transparent),
+    radial-gradient(1px 1px at 45% 80%, rgba(255,255,255,0.5), transparent),
+    radial-gradient(1px 1px at 85% 20%, rgba(255,255,255,0.6), transparent),
+    radial-gradient(1px 1px at 10% 70%, rgba(255,255,255,0.55), transparent);
+  animation: p3p-stars-pulse 6s ease-in-out infinite;
+}
+@keyframes p3p-stars-pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+.p3p-inner {
+  position: relative; z-index: 2; text-align: center;
+  max-width: 640px; padding: 2.5rem;
+}
+.p3p-eyebrow {
+  font-family: var(--font-ui); font-weight: 600;
+  font-size: 0.8rem; letter-spacing: 0.55em;
+  color: var(--phase3); margin-bottom: 2.5rem;
+  opacity: 0; animation: pi-up 1.4s ease 0.4s forwards;
+}
+.p3p-line {
+  font-family: var(--font-display); font-style: italic;
+  font-size: clamp(1.2rem, 2.6vw, 1.8rem);
+  color: var(--text); line-height: 1.7;
+  margin: 1.4rem 0; min-height: 1.7em;
+}
+.p3p-line .ch {
+  opacity: 0; display: inline-block;
+  animation: p3p-letter 0.04s ease forwards;
+}
+@keyframes p3p-letter { to { opacity: 1; } }
+.p3p-btn {
+  margin-top: 2.5rem; opacity: 0;
+  background: transparent; border: 1px solid var(--phase3); color: var(--phase3);
+  padding: 0.9rem 2.2rem; letter-spacing: 0.2em; font-size: 0.95rem;
+  transition: all 0.4s ease;
+}
+.p3p-btn.ready { animation: pi-up 1.4s ease forwards; }
+.p3p-btn:hover {
+  background: var(--phase3); color: var(--bg);
+  box-shadow: 0 0 30px var(--phase-glow);
+}
+@media (prefers-reduced-motion: reduce) {
+  #phase3-preamble { transition: none; }
+  .p3p-line .ch, .p3p-eyebrow, .p3p-btn.ready { animation: none !important; opacity: 1 !important; }
+}

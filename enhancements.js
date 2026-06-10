@@ -1,0 +1,340 @@
+/* ════════════════════════════════════════════════════════════════════
+   ENHANCEMENTS · capa aditiva, hookea funciones existentes
+   Visualización 1-6 + Estrategia Fase III (preámbulo)
+   ════════════════════════════════════════════════════════════════════ */
+(function () {
+  "use strict";
+
+  // Espera a que script.js termine de cargar (define save, settings, etc.)
+  function ready(fn) {
+    if (document.readyState !== 'loading') setTimeout(fn, 0);
+    else document.addEventListener('DOMContentLoaded', fn);
+  }
+
+  ready(function () {
+
+    /* ───────── helpers ───────── */
+    const $ = (s) => document.querySelector(s);
+    const reduced = () => (typeof settings !== 'undefined' && settings.reducedMotion) ||
+      matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    /* (1) Atmósfera dinámica · marca data-phase en <body> */
+    function syncPhaseAttr() {
+      try {
+        const p = (typeof save !== 'undefined' && save) ? Math.min(save.phase || 1, 3) : 1;
+        document.body.setAttribute('data-phase', String(p));
+        // calidad para CSS condicional
+        const q = (typeof QUALITY !== 'undefined') ? QUALITY :
+          (typeof settings !== 'undefined' ? settings.quality : 'auto');
+        document.body.setAttribute('data-quality', q || 'auto');
+      } catch (e) { }
+    }
+    syncPhaseAttr();
+
+    /* (1) Cinematic intro · se dispara cuando se entra a una pantalla de fase */
+    const PHASE_INTROS = {
+      1: { eyebrow: 'FASE I', title: 'Palabras del Alma', sub: 'Un susurro entre estrellas comienza…' },
+      2: { eyebrow: 'FASE II', title: 'Constelaciones de la Mente', sub: 'Lo que la lógica revela, el corazón lo abraza.' },
+      3: { eyebrow: 'FASE III', title: 'El Omega', sub: 'Donde toda luz converge.' },
+    };
+    let lastIntroPhase = 0;
+    function playPhaseIntro(phase) {
+      if (!PHASE_INTROS[phase] || lastIntroPhase === phase) return;
+      lastIntroPhase = phase;
+      const ov = $('#phase-intro-overlay');
+      if (!ov) return;
+      const data = PHASE_INTROS[phase];
+      $('#pi-eyebrow').textContent = data.eyebrow;
+      $('#pi-title').textContent = data.title;
+      $('#pi-sub').textContent = data.sub;
+      ov.classList.remove('show'); void ov.offsetWidth;
+      ov.classList.add('show');
+      const dur = reduced() ? 1400 : 3600;
+      setTimeout(() => ov.classList.remove('show'), dur);
+    }
+
+    /* (2) Mini-constelación de progreso en HUD */
+    const PHASE_STEPS = { 1: 7, 2: 4, 3: 1 };
+    function getDoneCount() {
+      try {
+        const p = save.phase || 1;
+        if (p === 1) return (save.solvedLetters || []).filter(Boolean).length;
+        if (p === 2) return (save.uploaded || []).filter(Boolean).length;
+        if (p === 3) return save.phase3 ? 1 : 0;
+      } catch (e) { }
+      return 0;
+    }
+    function renderConstellation() {
+      const c = $('#hud-constellation');
+      if (!c || typeof save === 'undefined' || !save) return;
+      const phase = Math.min(save.phase || 1, 3);
+      const total = PHASE_STEPS[phase] || 3;
+      const done = Math.min(getDoneCount(), total);
+      // sólo re-render si cambia la firma
+      const sig = phase + ':' + total + ':' + done;
+      if (c.dataset.sig === sig) return;
+      c.dataset.sig = sig;
+      c.innerHTML = '';
+      for (let i = 0; i < total; i++) {
+        const d = document.createElement('span');
+        d.className = 'hc-dot' + (i < done ? ' done' : (i === done ? ' current' : ''));
+        c.appendChild(d);
+        if (i < total - 1) {
+          const l = document.createElement('span');
+          l.className = 'hc-link';
+          c.appendChild(l);
+        }
+      }
+    }
+
+    /* (2) HUD auto-hide con timeout de inactividad */
+    let hideTimer = null;
+    function bumpHUD() {
+      const tb = $('#topbar');
+      if (!tb) return;
+      tb.classList.remove('auto-hidden');
+      clearTimeout(hideTimer);
+      hideTimer = setTimeout(() => {
+        if (!document.querySelector('.modal-open, #gate-overlay.show, #phase-intro-overlay.show, #phase3-preamble.show')) {
+          tb.classList.add('auto-hidden');
+        }
+      }, 4500);
+    }
+    ['mousemove', 'touchstart', 'keydown', 'click', 'scroll'].forEach(ev => {
+      window.addEventListener(ev, bumpHUD, { passive: true });
+    });
+    bumpHUD();
+
+    /* Wrapper de updateHUD existente */
+    if (typeof window.updateHUD === 'function') {
+      const orig = window.updateHUD;
+      window.updateHUD = function () {
+        const r = orig.apply(this, arguments);
+        syncPhaseAttr();
+        renderConstellation();
+        return r;
+      };
+    }
+    // refresco periódico defensivo
+    setInterval(() => { syncPhaseAttr(); renderConstellation(); }, 1200);
+
+    /* Wrapper de showScreen para disparar intro al entrar en fase */
+    if (typeof window.showScreen === 'function') {
+      const origShow = window.showScreen;
+      window.showScreen = function (id, after) {
+        return origShow.call(this, id, function () {
+          try {
+            if (id === 'phase1-screen') playPhaseIntro(1);
+            else if (id === 'phase2-screen') playPhaseIntro(2);
+            else if (id === 'phase3-screen') playPhaseIntro(3);
+            else lastIntroPhase = 0;
+          } catch (e) { }
+          if (typeof after === 'function') after();
+        });
+      };
+    }
+
+    /* (3) Feedback rico: shake + flash en error, chispas en acierto */
+    function feedbackError(el) {
+      if (!el) return;
+      el.classList.remove('fx-shake', 'fx-error-flash');
+      void el.offsetWidth;
+      el.classList.add('fx-shake', 'fx-error-flash');
+      setTimeout(() => el.classList.remove('fx-shake', 'fx-error-flash'), 700);
+      try { if (typeof beep === 'function') beep(180, 0.18, 'sawtooth', 0.04); } catch (e) { }
+    }
+    function feedbackSuccess(el) {
+      if (!el) return;
+      el.classList.remove('fx-success-pulse');
+      void el.offsetWidth;
+      el.classList.add('fx-success-pulse');
+      setTimeout(() => el.classList.remove('fx-success-pulse'), 900);
+      // chispas
+      if (reduced()) return;
+      const r = el.getBoundingClientRect();
+      const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+      const n = (typeof QUALITY !== 'undefined' && QUALITY === 'low') ? 6 : 14;
+      for (let i = 0; i < n; i++) {
+        const s = document.createElement('div');
+        s.className = 'fx-spark';
+        s.style.left = cx + 'px';
+        s.style.top = cy + 'px';
+        const a = Math.random() * Math.PI * 2;
+        const d = 40 + Math.random() * 80;
+        s.style.setProperty('--dx', Math.cos(a) * d + 'px');
+        s.style.setProperty('--dy', Math.sin(a) * d + 'px');
+        document.body.appendChild(s);
+        setTimeout(() => s.remove(), 1000);
+      }
+    }
+
+    // Observa inputs de las fases: si el script existente marca dataset.errored o el botón añade .correct, reaccionamos
+    document.addEventListener('animationstart', () => {/* placeholder */ });
+    // Hook genérico vía MutationObserver sobre inputs con dataset.errored
+    const mo = new MutationObserver((mutations) => {
+      for (const m of mutations) {
+        if (m.type === 'attributes' && m.target instanceof HTMLElement) {
+          if (m.attributeName === 'data-errored' && m.target.dataset.errored === '1') {
+            feedbackError(m.target);
+          }
+          if (m.attributeName === 'class') {
+            const cls = m.target.className || '';
+            if (typeof cls === 'string') {
+              if (/\b(correct|solved|success)\b/.test(cls) && !m.target.dataset.fxDone) {
+                m.target.dataset.fxDone = '1';
+                feedbackSuccess(m.target);
+              }
+              if (/\b(wrong|error|invalid)\b/.test(cls) && !m.target.dataset.fxErr) {
+                m.target.dataset.fxErr = '1';
+                feedbackError(m.target);
+                setTimeout(() => { delete m.target.dataset.fxErr; }, 800);
+              }
+            }
+          }
+        }
+      }
+    });
+    mo.observe(document.body, { subtree: true, attributes: true, attributeFilter: ['class', 'data-errored'] });
+    // expose for manual calls desde script.js si quieres
+    window.fxError = feedbackError;
+    window.fxSuccess = feedbackSuccess;
+
+    /* (4) Mapa estelar como hub: dibuja líneas entre nodos y preview hover */
+    function decorateMap() {
+      const map = $('#map-screen');
+      if (!map || !map.classList.contains('active')) return;
+      const wrap = map.querySelector('.map-canvas, .map-wrap, .map-grid, .stellar-map') || map;
+      const nodes = wrap.querySelectorAll('.map-node, .star-node, [data-map-node]');
+      if (!nodes.length || wrap.querySelector('.map-link-svg')) return;
+      if (getComputedStyle(wrap).position === 'static') wrap.style.position = 'relative';
+      const wrapRect = wrap.getBoundingClientRect();
+      const svgNS = 'http://www.w3.org/2000/svg';
+      const svg = document.createElementNS(svgNS, 'svg');
+      svg.setAttribute('class', 'map-link-svg');
+      svg.setAttribute('viewBox', `0 0 ${wrapRect.width} ${wrapRect.height}`);
+      svg.setAttribute('preserveAspectRatio', 'none');
+      const pts = [];
+      nodes.forEach((n) => {
+        const r = n.getBoundingClientRect();
+        pts.push({
+          x: r.left - wrapRect.left + r.width / 2,
+          y: r.top - wrapRect.top + r.height / 2,
+          done: n.classList.contains('done') || n.classList.contains('completed') || n.classList.contains('unlocked'),
+          el: n
+        });
+      });
+      for (let i = 0; i < pts.length - 1; i++) {
+        const line = document.createElementNS(svgNS, 'line');
+        line.setAttribute('x1', pts[i].x); line.setAttribute('y1', pts[i].y);
+        line.setAttribute('x2', pts[i + 1].x); line.setAttribute('y2', pts[i + 1].y);
+        if (pts[i].done) line.classList.add('lit');
+        svg.appendChild(line);
+      }
+      wrap.insertBefore(svg, wrap.firstChild);
+
+      // hover preview
+      nodes.forEach((n) => {
+        n.addEventListener('mouseenter', () => {
+          const title = n.getAttribute('data-title') || n.querySelector('.map-title, h3, h2')?.textContent || 'Fase';
+          const meta = n.getAttribute('data-meta') ||
+            (n.classList.contains('done') ? 'Completada ✓' :
+              n.classList.contains('locked') ? 'Bloqueada' : 'En curso');
+          let p = wrap.querySelector('.map-node-preview');
+          if (!p) { p = document.createElement('div'); p.className = 'map-node-preview'; wrap.appendChild(p); }
+          p.innerHTML = `<div class="mnp-title">${title}</div><div class="mnp-meta">${meta}</div>`;
+          const r = n.getBoundingClientRect();
+          p.style.left = (r.left - wrapRect.left + r.width / 2) + 'px';
+          p.style.top = (r.top - wrapRect.top) + 'px';
+          requestAnimationFrame(() => p.classList.add('show'));
+        });
+        n.addEventListener('mouseleave', () => {
+          wrap.querySelector('.map-node-preview')?.classList.remove('show');
+        });
+      });
+
+      // Voyager achievement
+      try { if (typeof unlockAchievement === 'function') unlockAchievement('voyager'); } catch (e) { }
+    }
+    new MutationObserver(() => { if ($('#map-screen')?.classList.contains('active')) setTimeout(decorateMap, 100); })
+      .observe(document.body, { subtree: true, attributes: true, attributeFilter: ['class'] });
+
+    /* (6) Adaptive quality real · si FPS bajo, forzar low */
+    let last = performance.now(), frames = 0, low = 0;
+    function fpsLoop(t) {
+      frames++;
+      if (t - last >= 1000) {
+        if (frames < 35 && (typeof settings === 'undefined' || settings.quality === 'auto')) {
+          low++;
+          if (low >= 3) { window.QUALITY = 'low'; document.body.setAttribute('data-quality', 'low'); }
+        } else low = 0;
+        frames = 0; last = t;
+      }
+      requestAnimationFrame(fpsLoop);
+    }
+    requestAnimationFrame(fpsLoop);
+
+    /* ═════════ ESTRATEGIA FASE III · Preámbulo lento ═════════ */
+    const preamble = $('#phase3-preamble');
+    function typeLine(p) {
+      return new Promise((resolve) => {
+        const text = p.getAttribute('data-text') || '';
+        p.textContent = '';
+        if (reduced()) { p.textContent = text; return resolve(); }
+        let i = 0;
+        const step = () => {
+          if (i >= text.length) return resolve();
+          const span = document.createElement('span');
+          span.className = 'ch';
+          span.textContent = text[i];
+          span.style.animationDelay = '0s';
+          p.appendChild(span);
+          i++;
+          setTimeout(step, 55 + Math.random() * 35);
+        };
+        step();
+      });
+    }
+    async function playPhase3Preamble() {
+      if (!preamble) return;
+      preamble.classList.add('show');
+      // baja música si existe
+      const m = $('#bgMusic');
+      const prevVol = m?.volume;
+      if (m) { try { m.volume = Math.max(0.08, (prevVol || 0.6) * 0.25); } catch (e) { } }
+      const lines = preamble.querySelectorAll('.p3p-line');
+      for (const ln of lines) {
+        await typeLine(ln);
+        await new Promise(r => setTimeout(r, reduced() ? 200 : 900));
+      }
+      const btn = $('#p3p-continue');
+      btn.classList.add('ready');
+      btn.onclick = () => {
+        preamble.classList.remove('show');
+        if (m && prevVol != null) { try { m.volume = prevVol; } catch (e) { } }
+        // continuar al gate / fase 3 real
+        try {
+          if (typeof window.showScreen === 'function') window.showScreen('phase3-screen');
+          else if (typeof window.openGate === 'function') window.openGate();
+        } catch (e) { }
+      };
+    }
+    // Disparar el preámbulo automáticamente cuando se desbloquea fase 3 y aún no se ha completado
+    // Hook sobre cambios en save.phase
+    let lastPhase = (typeof save !== 'undefined' && save) ? save.phase : 0;
+    setInterval(() => {
+      try {
+        if (!save) return;
+        if (save.phase === 3 && lastPhase !== 3 && !save.phase3) {
+          lastPhase = 3;
+          // pequeño retraso para no chocar con supernova
+          setTimeout(playPhase3Preamble, 1800);
+        }
+        lastPhase = save.phase;
+      } catch (e) { }
+    }, 600);
+
+    // Expose para invocar manualmente desde consola/tests
+    window.playPhase3Preamble = playPhase3Preamble;
+    window.playPhaseIntro = playPhaseIntro;
+  });
+})();

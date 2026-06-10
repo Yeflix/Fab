@@ -5,12 +5,17 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>✦ Un Viaje entre Estrellas</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Inter:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="./style.css">
+  <link rel="stylesheet" href="./enhancements.css">
 </head>
 
 <body>
 
-  <audio id="bgMusic" preload="auto"></audio>
+  <audio id="bgMusic" preload="none"></audio>
 
   <div id="music-selector-overlay" class="music-overlay">
     <div class="gate-card music-card">
@@ -43,8 +48,36 @@
       <div class="bar-wrap">
         <div class="bar-fill" id="hud-bar"></div>
       </div>
+      <div class="hud-constellation" id="hud-constellation" aria-hidden="true"></div>
       <span class="hud-stars" id="hud-stars">★ 0</span>
     </div>
+    <div class="hud-right">
+      <button class="icon-btn" id="btn-mute" title="Sonido">🔊</button>
+      <button class="icon-btn" id="btn-settings" title="Ajustes">⚙</button>
+    </div>
+  </div>
+
+  <!-- CINEMATIC PHASE INTRO -->
+  <div id="phase-intro-overlay" aria-hidden="true">
+    <div class="pi-inner">
+      <div class="pi-eyebrow" id="pi-eyebrow">FASE I</div>
+      <h1 class="pi-title" id="pi-title">Palabras del Alma</h1>
+      <div class="pi-sub" id="pi-sub">Un susurro entre estrellas comienza…</div>
+      <div class="pi-rule"></div>
+    </div>
+  </div>
+
+  <!-- PHASE III PREAMBLE (slow, letter-by-letter) -->
+  <div id="phase3-preamble" aria-hidden="true">
+    <div class="p3p-stars"></div>
+    <div class="p3p-inner">
+      <div class="p3p-eyebrow">FASE III · ANTESALA</div>
+      <p class="p3p-line" data-text="En el silencio del cosmos, una sola voz queda."></p>
+      <p class="p3p-line" data-text="Respira. Lo que sigue no se resuelve: se siente."></p>
+      <p class="p3p-line" data-text="Cuando estés lista, cruza la puerta."></p>
+      <button class="btn p3p-btn" id="p3p-continue">✦ Cruzar el umbral</button>
+    </div>
+  </div>
     <div class="hud-right">
       <button class="icon-btn" id="btn-mute" title="Sonido">🔊</button>
       <button class="icon-btn" id="btn-settings" title="Ajustes">⚙</button>
@@ -392,7 +425,7 @@
           </div>
         </div>
         <div class="setting-row">
-          <div class="label">Música ambiente <small>Sube tu MP3 (máx 8 MB, guardado local)</small></div>
+          <div class="label">Música ambiente <small>Sube tu MP3 (máx 3 MB, guardado local)</small></div>
           <div class="music-block">
             <div class="mb-row">
               <label class="btn small file-btn">SUBIR MP3<input type="file" id="music-upload" accept="audio/*"></label>
@@ -518,7 +551,6 @@
   </div>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics-compat.js"></script>
 
   <script>
     // Configuración de tu aplicación web de Firebase
@@ -535,14 +567,13 @@
     // 1. Inicializar Firebase globalmente
     firebase.initializeApp(firebaseConfig);
 
-    // 2. Inicializar Analytics (opcional)
-    firebase.analytics();
 
     // 3. Inicializar Firestore y asignarlo a window._db para que script.js lo reconozca
     window._db = firebase.firestore();
   </script>
 
   <script src="./script.js"></script>
+  <script src="./enhancements.js"></script>
 
 </body>
 

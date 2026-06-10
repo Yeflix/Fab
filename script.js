@@ -126,7 +126,7 @@ function resolveQuality() {
     return 'high';
 }
 const QCONF = {
-    low: { stars: 45, particles: 0, fps: 24, glow: false, dpr: 1, planets: 2, shooters: 0, constellations: 1 },
+    low: { stars: 30, particles: 0, fps: 20, glow: false, dpr: 1, planets: 2, shooters: 0, constellations: 1 },
     medium: { stars: 95, particles: 12, fps: 36, glow: false, dpr: 1, planets: 3, shooters: 1, constellations: 2 },
     high: { stars: 170, particles: 30, fps: 60, glow: true, dpr: 1.35, planets: 4, shooters: 2, constellations: 3 },
 };
@@ -1998,8 +1998,12 @@ function drawHint() {
 function drawReset() { loadDrawConstellation(drawState.idx); }
 
 /* ════════════════ COSMIC BG CANVAS (inside .draw-wrap) ════════════════ */
+let _drawBgRO = null;
 function startDrawBg() {
     const cv = document.getElementById('draw-bgcanvas'); if (!cv) return;
+    // Cancelar loop y observer previos para evitar fugas al reentrar
+    if (_drawBgRaf) { cancelAnimationFrame(_drawBgRaf); _drawBgRaf = null; }
+    if (_drawBgRO) { try { _drawBgRO.disconnect(); } catch (e) {} _drawBgRO = null; }
     const ctx = cv.getContext('2d');
     let stars = [], dust = [], shoot = null, t0 = performance.now(), W = 0, H = 0, dpr = 1;
     function resize() {
@@ -2074,8 +2078,7 @@ function startDrawBg() {
         ctx.globalCompositeOperation = 'source-over';
     }
     resize();
-    const ro = new ResizeObserver(resize); ro.observe(cv);
-    if (_drawBgRaf) cancelAnimationFrame(_drawBgRaf);
+    _drawBgRO = new ResizeObserver(resize); _drawBgRO.observe(cv);
     _drawBgRaf = requestAnimationFrame(frame);
 }
 
@@ -2212,7 +2215,7 @@ function renderShareCard() {
         const [c0, c1, c2] = p.col;
         // Outer halo
         const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, halo);
-        g.addColorStop(0, c0); g.addColorStop(0.25, c1.replace(')', ',0.85)').replace('rgb', 'rgba'));
+        g.addColorStop(0, c0); g.addColorStop(0.25, hexA(c1, 0.85));
         g.addColorStop(0.55, hexA(c1, 0.35)); g.addColorStop(1, hexA(c2, 0));
         ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.x, p.y, halo, 0, Math.PI * 2); ctx.fill();
         // Bright core
@@ -2254,13 +2257,7 @@ function renderShareCard() {
         ctx.fillText(from, W / 2, H * 0.93);
     }
 }
-/* Convert #rrggbb → rgba(...,a) */
-function hexA(hex, a) {
-    if (!hex || hex[0] !== '#') return hex;
-    const h = hex.slice(1);
-    const r = parseInt(h.substr(0, 2), 16), g = parseInt(h.substr(2, 2), 16), b = parseInt(h.substr(4, 2), 16);
-    return `rgba(${r},${g},${b},${a})`;
-}
+/* hexA() se declara más abajo (versión única) */
 function wrapText(ctx, text, x, y, maxW, lh) {
     const words = (text || '').split(/\s+/); let line = '', cy = y;
     for (const w of words) {
@@ -2376,7 +2373,7 @@ function clearMusic() {
 document.addEventListener('change', e => {
     if (e.target && e.target.id === 'music-upload') {
         const f = e.target.files && e.target.files[0]; if (!f) return;
-        if (f.size > 500 * 1024 * 1024) { showToast('Máx 500 MB'); e.target.value = ''; return; }
+        if (f.size > 3 * 1024 * 1024) { showToast('Máx 3 MB (límite de almacenamiento local)'); e.target.value = ''; return; }
         const r = new FileReader();
         r.onload = () => {
             try { localStorage.setItem(MUSIC_KEY, JSON.stringify({ src: r.result, name: f.name })); }
@@ -2511,12 +2508,160 @@ function playTrack(index) {
 }
 
 // Configurar la transición automática de forma circular al terminar la canción elegida
-document.addEventListener('DOMContentLoaded', () => {
+// (script.js se carga al final del body, así que registramos directamente — DOMContentLoaded ya disparó)
+(function () {
     const bgMusic = document.getElementById('bgMusic');
     if (bgMusic) {
         bgMusic.addEventListener('ended', () => {
-            let nextIndex = (currentTrackIndex + 1) % PLAYLIST.length;
+            const nextIndex = (currentTrackIndex + 1) % PLAYLIST.length;
             playTrack(nextIndex);
         });
     }
-});
+})();
+
+/* ============================================================
+   RESPONSIVE + PERFORMANCE (integrado)
+   ============================================================ */
+(function () {
+  'use strict';
+  if (window.__perfInstalled) return;
+  window.__perfInstalled = true;
+
+  var doc = document.documentElement;
+  var nav = navigator;
+
+  /* ---------- 1. Heurística de gama baja ---------- */
+  function isLowEnd() {
+    try {
+      var mem   = nav.deviceMemory || 4;
+      var cores = nav.hardwareConcurrency || 4;
+      var conn  = nav.connection || {};
+      var saveData = !!conn.saveData;
+      var slowNet  = /^(slow-2g|2g|3g)$/i.test(conn.effectiveType || '');
+      var minSide  = Math.min(innerWidth, innerHeight);
+      var coarse   = matchMedia('(pointer:coarse)').matches;
+      var reduced  = matchMedia('(prefers-reduced-motion: reduce)').matches;
+      return (
+        mem <= 2 ||
+        cores <= 4 && minSide < 500 ||
+        saveData || slowNet || reduced ||
+        (coarse && minSide < 380)
+      );
+    } catch (e) { return false; }
+  }
+
+  function applyLowEnd(reason) {
+    if (doc.classList.contains('perf-low')) return;
+    doc.classList.add('perf-low');
+    try {
+      if (window.settings && window.settings.quality === 'auto') {
+        window.settings.quality = 'low';
+        if (typeof window.saveSettings === 'function') window.saveSettings();
+        if (typeof window.resolveQuality === 'function') {
+          window.QUALITY = window.resolveQuality();
+        } else {
+          window.QUALITY = 'low';
+        }
+        if (typeof window.initBgEntities === 'function') window.initBgEntities();
+        if (typeof window.startBg === 'function') window.startBg();
+      }
+    } catch (e) {}
+    console.info('[perf] low-end mode enabled (' + (reason || 'heuristic') + ')');
+  }
+
+  if (isLowEnd()) applyLowEnd('initial');
+
+  /* ---------- 2. Batería ---------- */
+  if (nav.getBattery) {
+    nav.getBattery().then(function (b) {
+      function check() {
+        if (!b.charging && b.level < 0.2) applyLowEnd('battery');
+      }
+      b.addEventListener('levelchange', check);
+      b.addEventListener('chargingchange', check);
+      check();
+    }).catch(function () {});
+  }
+
+  /* ---------- 3. Cambios de red ---------- */
+  if (nav.connection && nav.connection.addEventListener) {
+    nav.connection.addEventListener('change', function () {
+      if (nav.connection.saveData || /^(slow-2g|2g|3g)$/i.test(nav.connection.effectiveType || '')) {
+        applyLowEnd('network');
+      }
+    });
+  }
+
+  /* ---------- 4. Pausa por inactividad ---------- */
+  var IDLE_MS = 45000;
+  var idleTimer = null;
+  var paused = false;
+
+  function pauseBg() {
+    if (paused) return;
+    paused = true;
+    window.pageVisible = false;
+  }
+  function resumeBg() {
+    if (!paused) return;
+    paused = false;
+    window.pageVisible = !document.hidden;
+  }
+  function bumpActivity() {
+    resumeBg();
+    clearTimeout(idleTimer);
+    idleTimer = setTimeout(pauseBg, IDLE_MS);
+  }
+  ['pointerdown','keydown','touchstart','wheel','scroll'].forEach(function (ev) {
+    addEventListener(ev, bumpActivity, { passive: true });
+  });
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden) pauseBg(); else bumpActivity();
+  });
+  bumpActivity();
+
+  /* ---------- 5. Pausa durante scroll ---------- */
+  var scrollT = null;
+  addEventListener('scroll', function () {
+    if (!doc.classList.contains('perf-low')) return;
+    window.pageVisible = false;
+    clearTimeout(scrollT);
+    scrollT = setTimeout(function () {
+      if (!document.hidden) window.pageVisible = true;
+    }, 180);
+  }, { passive: true });
+
+  /* ---------- 6. Resize/orientación ---------- */
+  var lastW = innerWidth, rotT = null;
+  addEventListener('orientationchange', function () {
+    clearTimeout(rotT);
+    rotT = setTimeout(function () {
+      if (innerWidth !== lastW) {
+        lastW = innerWidth;
+        if (typeof window.resizeBgCanvas === 'function') window.resizeBgCanvas();
+        if (typeof window.initBgEntities === 'function') window.initBgEntities();
+      }
+    }, 300);
+  }, { passive: true });
+
+  /* ---------- 7. FPS watchdog ---------- */
+  (function fpsWatch() {
+    var frames = 0, t0 = performance.now(), bad = 0;
+    window.__fpsTick = function () { frames++; };
+    setInterval(function () {
+      var now = performance.now();
+      var fps = (frames * 1000) / (now - t0);
+      frames = 0; t0 = now;
+      if (fps && fps < 20) bad++; else bad = 0;
+      if (bad >= 3) { applyLowEnd('fps:' + fps.toFixed(1)); bad = 0; }
+    }, 1000);
+  })();
+
+  /* ---------- 8. Helpers ---------- */
+  window.__perf = {
+    forceLow: function () { applyLowEnd('manual'); },
+    isLow: function () { return doc.classList.contains('perf-low'); },
+    pause: pauseBg,
+    resume: resumeBg,
+  };
+})();
