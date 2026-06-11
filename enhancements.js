@@ -276,24 +276,41 @@
     /* ═════════ ESTRATEGIA FASE III · Preámbulo lento ═════════ */
     const preamble = $('#phase3-preamble');
     function typeLine(p) {
-      return new Promise((resolve) => {
-        const text = p.getAttribute('data-text') || '';
-        p.textContent = '';
-        if (reduced()) { p.textContent = text; return resolve(); }
-        let i = 0;
-        const step = () => {
-          if (i >= text.length) return resolve();
-          const span = document.createElement('span');
-          span.className = 'ch';
-          span.textContent = text[i];
-          span.style.animationDelay = '0s';
-          p.appendChild(span);
-          i++;
-          setTimeout(step, 55 + Math.random() * 35);
-        };
-        step();
-      });
+  return new Promise((resolve) => {
+    let text = p.getAttribute('data-text') || '';
+    // 🔍 Depuración: muestra el texto real en consola (borrar después)
+    console.log('[typeLine] texto:', JSON.stringify(text));
+
+    // Si está vacío, no hacer nada
+    if (!text) return resolve();
+
+    p.textContent = '';
+    if (reduced()) {
+      p.textContent = text;
+      return resolve();
     }
+
+    let i = 0;
+    const step = () => {
+      if (i >= text.length) return resolve();
+      const ch = text[i];
+      const span = document.createElement('span');
+      span.className = 'ch';
+      // Para los espacios, usamos un &nbsp; visual, pero mejor conservar el carácter espacio
+      if (ch === ' ') {
+        span.innerHTML = '&nbsp;';
+        span.style.whiteSpace = 'pre';
+      } else {
+        span.textContent = ch;
+      }
+      span.style.animationDelay = '0s';
+      p.appendChild(span);
+      i++;
+      setTimeout(step, 55 + Math.random() * 35);
+    };
+    step();
+  });
+}
     async function playPhase3Preamble() {
       if (!preamble) return;
       preamble.classList.add('show');
@@ -309,29 +326,40 @@
       const btn = $('#p3p-continue');
       btn.classList.add('ready');
       btn.onclick = () => {
-        preamble.classList.remove('show');
-        if (m && prevVol != null) { try { m.volume = prevVol; } catch (e) { } }
-        // continuar al gate / fase 3 real
-        try {
-          if (typeof window.showScreen === 'function') window.showScreen('phase3-screen');
-          else if (typeof window.openGate === 'function') window.openGate();
-        } catch (e) { }
-      };
+  preamble.classList.remove('show');
+  if (m && prevVol != null) { try { m.volume = prevVol; } catch (e) { } }
+
+  // Mostrar el gate (solicitar la clave secreta) antes de entrar a la fase 3
+  if (typeof window.requestPhase3Access === 'function') {
+    window.requestPhase3Access(() => {
+      // Una vez que la clave sea correcta, mostrar la pantalla de fase 3
+      if (typeof window.showScreen === 'function') {
+        window.showScreen('phase3-screen');
+        // Asegurar que se construya y se inicie la confesión
+        if (typeof window.buildPhase3 === 'function') window.buildPhase3();
+        if (typeof window.startConfession === 'function') window.startConfession();
+      }
+    });
+  } else {
+    // Fallback por si no existe la función (no debería ocurrir)
+    if (typeof window.showScreen === 'function') window.showScreen('phase3-screen');
+  }
+};
     }
     // Disparar el preámbulo automáticamente cuando se desbloquea fase 3 y aún no se ha completado
     // Hook sobre cambios en save.phase
     let lastPhase = (typeof save !== 'undefined' && save) ? save.phase : 0;
     setInterval(() => {
-      try {
-        if (!save) return;
-        if (save.phase === 3 && lastPhase !== 3 && !save.phase3) {
-          lastPhase = 3;
-          // pequeño retraso para no chocar con supernova
-          setTimeout(playPhase3Preamble, 1800);
-        }
-        lastPhase = save.phase;
-      } catch (e) { }
-    }, 600);
+  try {
+    if (!save) return;
+    const gateActive = document.getElementById('gate-overlay')?.classList.contains('active');
+    if (save.phase === 3 && lastPhase !== 3 && !save.phase3 && !gateActive) {
+      lastPhase = 3;
+      setTimeout(playPhase3Preamble, 1800);
+    }
+    lastPhase = save.phase;
+  } catch (e) { }
+}, 600);
 
     // Expose para invocar manualmente desde consola/tests
     window.playPhase3Preamble = playPhase3Preamble;

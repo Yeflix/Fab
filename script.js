@@ -28,7 +28,8 @@ function freshSave() {
         phase3Unlocked: false,
         solvedLetters: new Array(7).fill(false),
         uploaded: new Array(4).fill(false),
-        stars: 0, p1Errors: 0, achievements: []
+        stars: 0, p1Errors: 0, achievements: [],
+        poemResponses: {}  // FIX: inicializado desde el principio
     };
 }
 let save = loadSave();
@@ -282,10 +283,11 @@ function drawBackground(ts) {
     // Stars
     for (const s of bgStars) {
         const t = Math.sin(ts * s.tw + s.off) * 0.5 + 0.5, a = s.opacity * t;
-        bgCtx.beginPath(); bgCtx.arc(s.x, s.y, s.r, 0, 6.283);
+        let safeR = Math.max(0.02, s.r || 0.3);
+        bgCtx.beginPath(); bgCtx.arc(s.x, s.y, safeR, 0, 6.283);
         bgCtx.fillStyle = `rgba(${s.hue},${a})`; bgCtx.fill();
         if (c.glow && s.r > 1.2 && t > 0.75) {
-            bgCtx.beginPath(); bgCtx.arc(s.x, s.y, s.r * 2.6, 0, 6.283);
+            bgCtx.beginPath(); bgCtx.arc(s.x, s.y, safeR * 2.6, 0, 6.283);
             bgCtx.fillStyle = `rgba(200,180,220,${a * 0.18})`; bgCtx.fill();
         }
         s.y -= s.speed * 0.1; if (s.y < -10) { s.y = h + 10; s.x = Math.random() * w; }
@@ -608,6 +610,7 @@ function nebulaDrift(fromIdx, toIdx, callback) {
         }
 
         /* Partículas con trail */
+        ctx.shadowBlur = 8; /* FIX: set once outside the loop, not per particle */
         stars.forEach(s => {
             if (t < .45) {
                 /* Expansión: salen del stage hacia afuera */
@@ -644,11 +647,12 @@ function nebulaDrift(fromIdx, toIdx, callback) {
             ctx.beginPath();
             ctx.arc(s.x, s.y, Math.max(.2, sz), 0, Math.PI * 2);
             ctx.fillStyle = s.color;
-            ctx.shadowBlur = 8; ctx.shadowColor = s.color;
+            ctx.shadowColor = s.color;
             ctx.globalAlpha = .9 * peak;
             ctx.fill();
-            ctx.shadowBlur = 0; ctx.globalAlpha = 1;
+            ctx.globalAlpha = 1;
         });
+        ctx.shadowBlur = 0; /* FIX: reset once after loop */
 
         /* Switch del contenido al 45% de la animación (en el pico máximo de oscuridad) */
         if (!switched && t >= .45) {
@@ -1102,38 +1106,62 @@ function completePhase1(restore) {
 
 /* ════════════════ PHASE 2 — PROBLEMS AS PLANETS ════════════════ */
 const problems = [
-    {
-        title: 'Problema 1 · Electromagnetismo', planet: '🪐', color: '#d4b88a', topic: 'Ley de Gauss con dieléctricos | Capacitancia | Energía', text: `Un capacitor esférico está formado por dos conductores concéntricos de radios a y c (a < c). La región entre las esferas se llena con dos capas dieléctricas: ε₁ desde r=a hasta r=b, y ε₂ desde r=b hasta r=c. Carga +Q en la esfera interna y −Q en la externa.
+{
+    title: 'Problema 1 · Electromagnetismo',
+    planet: '🪐',
+    color: '#d4b88a',
+    topic: 'Ley de Gauss con dieléctricos | Capacitancia | Energía',
+    text: `Un capacitor esférico está formado por dos conductores concéntricos de radios a y c (a < c). La región entre las esferas se llena con dos dieléctricos lineales, homogéneos e isotrópicos: ε₁ desde r=a hasta r=b y ε₂ desde r=b hasta r=c. La esfera interna posee carga +Q y la externa carga −Q.
 
 (a) Determine D⃗, E⃗ y P⃗ en r<a, a<r<b, b<r<c y r>c.
-(b) Calcule la diferencia de potencial y la capacitancia.
-(c) Determine la energía electrostática total.
-(d) Verifique C con W = Q²/(2C).
-(e) Analice los límites b→a y b→c.`},
-    {
-        title: 'Problema 2 · Mecánica Clásica', planet: '🌍', color: '#8bb4d0', topic: 'Fuerzas centrales | Órbitas | Precesión', text: `Una partícula de masa m bajo F(r) = -k/r² + α/r³, con k>0 y |α|≪k.
+(b) Calcule la diferencia de potencial y la capacitancia equivalente.
+(c) Determine la energía electrostática total almacenada.
+(d) Verifique el resultado mediante W = Q²/(2C).
+(e) Analice los límites b→a y b→c.`
+},
+{
+    title: 'Problema 2 · Mecánica Clásica',
+    planet: '🌍',
+    color: '#8bb4d0',
+    topic: 'Fuerzas centrales | Órbitas | Precesión',
+    text: `Una partícula de masa m se mueve bajo la fuerza central
 
-(a) Con u=1/r y Binet, derive: d²u/dθ² + u = k/(L²m) - α/(L²m)·u.
+F(r) = -k/r² + α/r³, donde k>0 y |α|≪ k.
+
+(a) Utilizando u=1/r y la ecuación de Binet, demuestre que d²u/dθ² + u = (mk/L²) − (mα/L²)u.
 (b) Para α=0, demuestre que las órbitas son secciones cónicas.
-(c) Para α≠0, halle la precesión angular Δθ por revolución.
-(d) Condición de órbitas circulares estables.
-(e) Aplíquelo a la precesión del perihelio (α=3GMm/c²).`},
-    {
-        title: 'Problema 3 · Análisis Complejo', planet: '🌑', color: '#d4a0b0', topic: 'Teorema de los Residuos | Cortes de rama', text: `Evalúe: I(a) = ∫₀^∞ ln x / (x²+a²)² dx,  a>0.
+(c) Para α≠0, determine la precesión angular Δθ por revolución.
+(d) Obtenga la condición para órbitas circulares estables.
+(e) Discuta la relación con la precesión del perihelio. Analice por qué la identificación α = 3GMm/c² es dimensionalmente incorrecta y compare este modelo con la corrección relativista efectiva.`
+},
+{
+    title: 'Problema 3 · Análisis Complejo',
+    planet: '🌑',
+    color: '#d4a0b0',
+    topic: 'Teorema de los Residuos | Cortes de rama',
+    text: `Evalúe
 
-(a) Proponga un contorno keyhole adecuado.
-(b) Identifique y clasifique singularidades, calcule residuos.
+I(a)=∫₀^∞ ln(x)/(x²+a²)² dx,   a>0.
+
+(a) Seleccione y justifique un contorno adecuado para resolver la integral mediante análisis complejo. Discuta las ventajas y limitaciones de los contornos semicircular y keyhole.
+(b) Identifique y clasifique las singularidades de la función integranda y calcule los residuos necesarios.
 (c) Aplique el Teorema de los Residuos.
-(d) Demuestre que los arcos tienden a cero.
-(e) Obtenga I(a) y verifique dimensionalmente.`},
-    {
-        title: 'Problema 4 · Cálculo Vectorial & Magnetismo', planet: '🌕', color: '#a0d4a0', topic: 'Biot-Savart | Ampère | Stokes', text: `Solenoide toroidal de sección rectangular: N vueltas, radios ρ₁<ρ₂, altura h, corriente I.
+(d) Demuestre que las contribuciones de los arcos relevantes desaparecen en el límite correspondiente.
+(e) Obtenga I(a) y verifique dimensionalmente el resultado.`
+},
+{
+    title: 'Problema 4 · Cálculo Vectorial & Magnetismo',
+    planet: '🌕',
+    color: '#a0d4a0',
+    topic: 'Biot-Savart | Ampère | Stokes',
+    text: `Considere un solenoide toroidal de sección rectangular con N vueltas, radios ρ₁<ρ₂, altura h y corriente I.
 
-(a) Con Ampère, halle B⃗ en ρ<ρ₁, ρ₁<ρ<ρ₂ y ρ>ρ₂.
-(b) Flujo total y autoinductancia L.
-(c) Verifique con Biot-Savart en ρ=(ρ₁+ρ₂)/2.
-(d) Con I(t)=I₀cos(ωt), halle la fem inducida en una espira.
-(e) Verifique con el teorema de Stokes.`},
+(a) Utilizando la ley de Ampère, determine B⃗ en las regiones ρ<ρ₁, ρ₁<ρ<ρ₂ y ρ>ρ₂.
+(b) Calcule el flujo magnético total y la autoinductancia L.
+(c) Verifique el resultado para B⃗ mediante la ley de Biot-Savart en ρ=(ρ₁+ρ₂)/2.
+(d) Si I(t)=I₀cos(ωt), determine la fem inducida en una espira secundaria que enlaza completamente el flujo magnético del toroide.
+(e) Verifique la consistencia de los resultados mediante el teorema de Stokes.`
+}
 ];
 function buildPhase2(restore) {
     const c = document.getElementById('problems-container'); c.innerHTML = '';
@@ -1241,17 +1269,49 @@ function buildPhase3() {
                 <div class="cb-moon"></div>
               </div>
               <p style="font-size:1.05rem;color:var(--text);line-height:1.9;text-align:center;">
-                Este proyecto esta inspirado para que puedas sabe una verdad, una confesion que llegue hacia ti de una manera "Inusual".<br>
-                La importancia que tienes en mi vida no es infima. Cada pensamiento, cada accion, cada momento que compartimos es especial for me.
+                Este proyecto está inspirado para que puedas conocer una verdad, una confesión que llegó hacia ti de una manera <em>"Inusual"</em>.<br>
+                La importancia que tienes en mi vida no es ínfima. Cada pensamiento, cada acción, cada momento que compartimos es especial para mí.
               </p>
               <div class="confession-final">
-                Фабиола,<br><br><span style="font-size:1.5rem;"></span><br>
+                Фабиола,<br><br><span style="font-size:1.5rem;">✦</span><br>
                 No es una ecuación por resolver ni un teorema por demostrar.<br>
                 Es la constante que da sentido a todas las variables de mi vida.<br>
                 La luz que reduce mi entropía a cero.<br>
+              </div>
+
+              <!-- ══ PROPUESTAS DE ENTREGA ══ -->
+              <div class="delivery-section">
+                <p class="delivery-label">✦ Ahora puedes llevar esta confesión contigo ✦</p>
+                <p class="delivery-sub">Descarga la carta completa como PDF — imprímela, guárdala o compártela como prefieras.</p>
+                <div class="delivery-cards">
+                  <div class="delivery-card" onclick="selectDelivery(this,'imprimir')">
+                    <div class="dc-icon">🖨️</div>
+                    <div class="dc-title">Carta Impresa</div>
+                    <div class="dc-desc">Imprímela y entrégala en mano. Algo real, tangible, que puedas guardar.</div>
+                  </div>
+                  <div class="delivery-card" onclick="selectDelivery(this,'digital')">
+                    <div class="dc-icon">📱</div>
+                    <div class="dc-title">Mensaje Digital</div>
+                    <div class="dc-desc">Envía el PDF por correo o mensajería. La distancia no detiene las estrellas.</div>
+                  </div>
+                  <div class="delivery-card" onclick="selectDelivery(this,'juntos')">
+                    <div class="dc-icon">🌌</div>
+                    <div class="dc-title">Leerla Juntos</div>
+                    <div class="dc-desc">Abre el PDF juntos, en el momento que el universo elija. Sin prisa.</div>
+                  </div>
+                  <div class="delivery-card" onclick="selectDelivery(this,'guardar')">
+                    <div class="dc-icon">✨</div>
+                    <div class="dc-title">Guardar el Secreto</div>
+                    <div class="dc-desc">Guárdala por ahora. El momento correcto siempre llega.</div>
+                  </div>
+                </div>
+                <button class="btn confession-pdf-btn" id="btn-download-confession" onclick="downloadConfessionPDF()">
+                  ✦ Descargar Carta de Confesión (PDF) ✦
+                </button>
+                <div id="pdf-feedback" style="font-size:.85rem;color:var(--gold);margin-top:.6rem;min-height:1.2em;text-align:center;"></div>
               </div>`;
 
-        } else if (s.type === 'poem') {
+                } else if (s.type === 'poem') {
             /* ── Poema + caja de reflexión ── */
             const saved = save?.poemResponses?.[i] || '';
             const sent = !!saved;
@@ -2003,7 +2063,7 @@ function startDrawBg() {
     const cv = document.getElementById('draw-bgcanvas'); if (!cv) return;
     // Cancelar loop y observer previos para evitar fugas al reentrar
     if (_drawBgRaf) { cancelAnimationFrame(_drawBgRaf); _drawBgRaf = null; }
-    if (_drawBgRO) { try { _drawBgRO.disconnect(); } catch (e) {} _drawBgRO = null; }
+    if (_drawBgRO) { try { _drawBgRO.disconnect(); } catch (e) { } _drawBgRO = null; }
     const ctx = cv.getContext('2d');
     let stars = [], dust = [], shoot = null, t0 = performance.now(), W = 0, H = 0, dpr = 1;
     function resize() {
@@ -2439,6 +2499,13 @@ function init() {
 
 /* ════════════════ WELCOME DIALOG ════════════════ */
 const WELCOME_KEY = 'fabiola_welcome_seen_v1';
+/* ════════════════ MUSIC SELECTOR ════════════════ */
+// FIX: función faltante que causaba ReferenceError al cerrar el welcome overlay
+function openMusicSelector() {
+    const selector = document.getElementById('music-selector-overlay');
+    if (selector) selector.style.display = 'flex';
+}
+
 function openWelcome() {
     const el = document.getElementById('welcome-overlay');
     if (!el) return;
@@ -2523,145 +2590,350 @@ function playTrack(index) {
    RESPONSIVE + PERFORMANCE (integrado)
    ============================================================ */
 (function () {
-  'use strict';
-  if (window.__perfInstalled) return;
-  window.__perfInstalled = true;
+    'use strict';
+    if (window.__perfInstalled) return;
+    window.__perfInstalled = true;
 
-  var doc = document.documentElement;
-  var nav = navigator;
+    var doc = document.documentElement;
+    var nav = navigator;
 
-  /* ---------- 1. Heurística de gama baja ---------- */
-  function isLowEnd() {
-    try {
-      var mem   = nav.deviceMemory || 4;
-      var cores = nav.hardwareConcurrency || 4;
-      var conn  = nav.connection || {};
-      var saveData = !!conn.saveData;
-      var slowNet  = /^(slow-2g|2g|3g)$/i.test(conn.effectiveType || '');
-      var minSide  = Math.min(innerWidth, innerHeight);
-      var coarse   = matchMedia('(pointer:coarse)').matches;
-      var reduced  = matchMedia('(prefers-reduced-motion: reduce)').matches;
-      return (
-        mem <= 2 ||
-        cores <= 4 && minSide < 500 ||
-        saveData || slowNet || reduced ||
-        (coarse && minSide < 380)
-      );
-    } catch (e) { return false; }
-  }
+    /* ---------- 1. Heurística de gama baja ---------- */
+    function isLowEnd() {
+        try {
+            var mem = nav.deviceMemory || 4;
+            var cores = nav.hardwareConcurrency || 4;
+            var conn = nav.connection || {};
+            var saveData = !!conn.saveData;
+            var slowNet = /^(slow-2g|2g|3g)$/i.test(conn.effectiveType || '');
+            var minSide = Math.min(innerWidth, innerHeight);
+            var coarse = matchMedia('(pointer:coarse)').matches;
+            var reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+            return (
+                mem <= 2 ||
+                cores <= 4 && minSide < 500 ||
+                saveData || slowNet || reduced ||
+                (coarse && minSide < 380)
+            );
+        } catch (e) { return false; }
+    }
 
-  function applyLowEnd(reason) {
-    if (doc.classList.contains('perf-low')) return;
-    doc.classList.add('perf-low');
-    try {
-      if (window.settings && window.settings.quality === 'auto') {
-        window.settings.quality = 'low';
-        if (typeof window.saveSettings === 'function') window.saveSettings();
-        if (typeof window.resolveQuality === 'function') {
-          window.QUALITY = window.resolveQuality();
-        } else {
-          window.QUALITY = 'low';
-        }
-        if (typeof window.initBgEntities === 'function') window.initBgEntities();
-        if (typeof window.startBg === 'function') window.startBg();
-      }
-    } catch (e) {}
-    console.info('[perf] low-end mode enabled (' + (reason || 'heuristic') + ')');
-  }
+    function applyLowEnd(reason) {
+        if (doc.classList.contains('perf-low')) return;
+        doc.classList.add('perf-low');
+        try {
+            if (window.settings && window.settings.quality === 'auto') {
+                window.settings.quality = 'low';
+                if (typeof window.saveSettings === 'function') window.saveSettings();
+                if (typeof window.resolveQuality === 'function') {
+                    window.QUALITY = window.resolveQuality();
+                } else {
+                    window.QUALITY = 'low';
+                }
+                if (typeof window.initBgEntities === 'function') window.initBgEntities();
+                if (typeof window.startBg === 'function') window.startBg();
+            }
+        } catch (e) { }
+        console.info('[perf] low-end mode enabled (' + (reason || 'heuristic') + ')');
+    }
 
-  if (isLowEnd()) applyLowEnd('initial');
+    if (isLowEnd()) applyLowEnd('initial');
 
-  /* ---------- 2. Batería ---------- */
-  if (nav.getBattery) {
-    nav.getBattery().then(function (b) {
-      function check() {
-        if (!b.charging && b.level < 0.2) applyLowEnd('battery');
-      }
-      b.addEventListener('levelchange', check);
-      b.addEventListener('chargingchange', check);
-      check();
-    }).catch(function () {});
-  }
+    /* ---------- 2. Batería ---------- */
+    if (nav.getBattery) {
+        nav.getBattery().then(function (b) {
+            function check() {
+                if (!b.charging && b.level < 0.2) applyLowEnd('battery');
+            }
+            b.addEventListener('levelchange', check);
+            b.addEventListener('chargingchange', check);
+            check();
+        }).catch(function () { });
+    }
 
-  /* ---------- 3. Cambios de red ---------- */
-  if (nav.connection && nav.connection.addEventListener) {
-    nav.connection.addEventListener('change', function () {
-      if (nav.connection.saveData || /^(slow-2g|2g|3g)$/i.test(nav.connection.effectiveType || '')) {
-        applyLowEnd('network');
-      }
+    /* ---------- 3. Cambios de red ---------- */
+    if (nav.connection && nav.connection.addEventListener) {
+        nav.connection.addEventListener('change', function () {
+            if (nav.connection.saveData || /^(slow-2g|2g|3g)$/i.test(nav.connection.effectiveType || '')) {
+                applyLowEnd('network');
+            }
+        });
+    }
+
+    /* ---------- 4. Pausa por inactividad ---------- */
+    var IDLE_MS = 45000;
+    var idleTimer = null;
+    var paused = false;
+
+    function pauseBg() {
+        if (paused) return;
+        paused = true;
+        window.pageVisible = false;
+    }
+    function resumeBg() {
+        if (!paused) return;
+        paused = false;
+        window.pageVisible = !document.hidden;
+    }
+    function bumpActivity() {
+        resumeBg();
+        clearTimeout(idleTimer);
+        idleTimer = setTimeout(pauseBg, IDLE_MS);
+    }
+    ['pointerdown', 'keydown', 'touchstart', 'wheel', 'scroll'].forEach(function (ev) {
+        addEventListener(ev, bumpActivity, { passive: true });
     });
-  }
+    document.addEventListener('visibilitychange', function () {
+        if (document.hidden) pauseBg(); else bumpActivity();
+    });
+    bumpActivity();
 
-  /* ---------- 4. Pausa por inactividad ---------- */
-  var IDLE_MS = 45000;
-  var idleTimer = null;
-  var paused = false;
+    /* ---------- 5. Pausa durante scroll ---------- */
+    var scrollT = null;
+    addEventListener('scroll', function () {
+        if (!doc.classList.contains('perf-low')) return;
+        window.pageVisible = false;
+        clearTimeout(scrollT);
+        scrollT = setTimeout(function () {
+            if (!document.hidden) window.pageVisible = true;
+        }, 180);
+    }, { passive: true });
 
-  function pauseBg() {
-    if (paused) return;
-    paused = true;
-    window.pageVisible = false;
-  }
-  function resumeBg() {
-    if (!paused) return;
-    paused = false;
-    window.pageVisible = !document.hidden;
-  }
-  function bumpActivity() {
-    resumeBg();
-    clearTimeout(idleTimer);
-    idleTimer = setTimeout(pauseBg, IDLE_MS);
-  }
-  ['pointerdown','keydown','touchstart','wheel','scroll'].forEach(function (ev) {
-    addEventListener(ev, bumpActivity, { passive: true });
-  });
-  document.addEventListener('visibilitychange', function () {
-    if (document.hidden) pauseBg(); else bumpActivity();
-  });
-  bumpActivity();
+    /* ---------- 6. Resize/orientación ---------- */
+    var lastW = innerWidth, rotT = null;
+    addEventListener('orientationchange', function () {
+        clearTimeout(rotT);
+        rotT = setTimeout(function () {
+            if (innerWidth !== lastW) {
+                lastW = innerWidth;
+                if (typeof window.resizeBgCanvas === 'function') window.resizeBgCanvas();
+                if (typeof window.initBgEntities === 'function') window.initBgEntities();
+            }
+        }, 300);
+    }, { passive: true });
 
-  /* ---------- 5. Pausa durante scroll ---------- */
-  var scrollT = null;
-  addEventListener('scroll', function () {
-    if (!doc.classList.contains('perf-low')) return;
-    window.pageVisible = false;
-    clearTimeout(scrollT);
-    scrollT = setTimeout(function () {
-      if (!document.hidden) window.pageVisible = true;
-    }, 180);
-  }, { passive: true });
+    /* ---------- 7. FPS watchdog ---------- */
+    (function fpsWatch() {
+        var frames = 0, t0 = performance.now(), bad = 0;
+        window.__fpsTick = function () { frames++; };
+        setInterval(function () {
+            var now = performance.now();
+            var fps = (frames * 1000) / (now - t0);
+            frames = 0; t0 = now;
+            if (fps && fps < 20) bad++; else bad = 0;
+            if (bad >= 3) { applyLowEnd('fps:' + fps.toFixed(1)); bad = 0; }
+        }, 1000);
+    })();
 
-  /* ---------- 6. Resize/orientación ---------- */
-  var lastW = innerWidth, rotT = null;
-  addEventListener('orientationchange', function () {
-    clearTimeout(rotT);
-    rotT = setTimeout(function () {
-      if (innerWidth !== lastW) {
-        lastW = innerWidth;
-        if (typeof window.resizeBgCanvas === 'function') window.resizeBgCanvas();
-        if (typeof window.initBgEntities === 'function') window.initBgEntities();
-      }
-    }, 300);
-  }, { passive: true });
-
-  /* ---------- 7. FPS watchdog ---------- */
-  (function fpsWatch() {
-    var frames = 0, t0 = performance.now(), bad = 0;
-    window.__fpsTick = function () { frames++; };
-    setInterval(function () {
-      var now = performance.now();
-      var fps = (frames * 1000) / (now - t0);
-      frames = 0; t0 = now;
-      if (fps && fps < 20) bad++; else bad = 0;
-      if (bad >= 3) { applyLowEnd('fps:' + fps.toFixed(1)); bad = 0; }
-    }, 1000);
-  })();
-
-  /* ---------- 8. Helpers ---------- */
-  window.__perf = {
-    forceLow: function () { applyLowEnd('manual'); },
-    isLow: function () { return doc.classList.contains('perf-low'); },
-    pause: pauseBg,
-    resume: resumeBg,
-  };
+    /* ---------- 8. Helpers ---------- */
+    window.__perf = {
+        forceLow: function () { applyLowEnd('manual'); },
+        isLow: function () { return doc.classList.contains('perf-low'); },
+        pause: pauseBg,
+        resume: resumeBg,
+    };
 })();
+function downloadConfessionPDF() {
+    try { sfxClick(); } catch (e) {}
+    const fb = document.getElementById('pdf-feedback');
+
+    // jsPDF se carga desde CDN como window.jspdf.jsPDF
+    const jsPDFCtor = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
+    if (!jsPDFCtor) {
+        if (fb) fb.textContent = '⚠ La librería PDF aún está cargando. Intenta en un momento.';
+        return;
+    }
+
+    if (fb) fb.textContent = '⏳ Generando tu carta…';
+
+    const doc = new jsPDFCtor({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const W = 210, H = 297;
+    const marginX = 22, lineH = 7.5;
+    let y = 0;
+
+    // ── Función interna para manejar el salto de página y mantener el diseño ──
+    function checkPageBreak(extraSpace = 0) {
+        const bottomMargin = 30; // Límite antes de tocar el borde inferior
+        if (y + extraSpace > H - bottomMargin) {
+            doc.addPage();
+            
+            // Re-dibujar Fondo oscuro elegante
+            doc.setFillColor(8, 8, 20);
+            doc.rect(0, 0, W, H, 'F');
+            
+            // Re-dibujar Borde dorado
+            doc.setDrawColor(212, 165, 116);
+            doc.setLineWidth(0.5);
+            doc.rect(10, 10, W - 20, H - 20);
+            doc.setLineWidth(0.2);
+            doc.rect(12, 12, W - 24, H - 24);
+            
+            // Reiniciar la altura Y con un pequeño margen superior
+            y = 25; 
+            
+            // Restaurar la fuente y color del cuerpo para seguir escribiendo
+            doc.setFont('times', 'normal');
+            doc.setFontSize(11.5);
+            doc.setTextColor(220, 210, 195);
+        }
+    }
+
+    // ── Fondo oscuro elegante (Página 1) ──
+    doc.setFillColor(8, 8, 20);
+    doc.rect(0, 0, W, H, 'F');
+
+    // ── Borde dorado (Página 1) ──
+    doc.setDrawColor(212, 165, 116);
+    doc.setLineWidth(0.5);
+    doc.rect(10, 10, W - 20, H - 20);
+    doc.setLineWidth(0.2);
+    doc.rect(12, 12, W - 24, H - 24);
+
+    // ── Encabezado decorativo ──
+    doc.setFont('times', 'italic');
+    doc.setFontSize(9);
+    doc.setTextColor(180, 140, 90);
+    doc.text('U N   V I A J E   E N T R E   C O R A Z O N E S   E S T E L A R E S', W / 2, 22, { align: 'center' });
+
+    y = 32;
+    doc.setLineWidth(0.3);
+    doc.setDrawColor(212, 165, 116);
+    doc.line(marginX, y, W - marginX, y);
+
+    // ── Título ──
+    y += 12;
+    doc.setFont('times', 'bolditalic');
+    doc.setFontSize(20);
+    doc.setTextColor(240, 208, 168);
+    doc.text('Carta de Confesión', W / 2, y, { align: 'center' });
+
+    // ── Subtítulo ──
+    y += 8;
+    doc.setFont('times', 'italic');
+    doc.setFontSize(11);
+    doc.setTextColor(180, 140, 90);
+    doc.text('— Fase III · El Omega —', W / 2, y, { align: 'center' });
+
+    y += 6;
+    doc.setLineWidth(0.2);
+    doc.line(marginX + 20, y, W - marginX - 20, y);
+
+    // ── Saludo ──
+    y += 10;
+    doc.setFont('times', 'bolditalic');
+    doc.setFontSize(14);
+    doc.setTextColor(240, 208, 168);
+    doc.text('Fabiola,', marginX, y);
+
+    // ── Cuerpo de la carta ──
+    const body = [
+        '',
+        'Este proyecto nació para expresar una parte de lo que siento por ti, por lo menos de forma',
+        'de aquello en lo que quizas sea bueno...',
+        '',
+        'Este detalle hecho con el corazon, no es solo para mostrar lo que siento, tambien para pedir perdon.',
+        'Ya que, despues de esto... Desconozco el rumbo cuyo vidas entre nosotros se puedan tornar.',
+        'Esto claramente no mostrara ni una tercio de lo que siento, pero si es un pedazo de mi que quiero que tomes.',
+        'Algo que, de seguro y de nuevo reitero, Dificilmente alguien se te pueda expresar en este contexto.',
+        '',
+        'Quizas has presenciado distintas formas cuyo sentimiento se te han expresado.',
+        "Cartas, canciones, declaraciones formales u otro tipo de detalle espero que honesto.",
+        'Pero estoy muy seguro, que como esta y otras formas en que he pensado hacer esto, no se te haran vivir.',
+        '',
+        "Asimismo, Despoja todo el misterio para revelar la verdad absoluta. Cuya verdad es que, Te amo",
+        "Te amo de una forma que no puedo explicar sinceramente, ya que al hacer una amiga, ",
+        'considerandote mi mejor amiga... quise evitar este sentimiento ya que supondria una sola verdad ',
+        'En estas circunstancias... Cada momento que pase contigo, cada flor y ramo de flor hecho por mi mano, ',
+        'Cada chocolate que te ofrecido, cada cuidado que te he entregado, cada noche en la que quizas ',
+        'nos divertiammos, cada mensaje tarde o temprano que recibia de ti, las risas...',
+        'Era un confort en un mundo en el que solo quisiera que estuviera una persona presente, tu.',
+        '',
+        "Fabi... Tu amistad desearia no poder perderla, ya que, aunque no es suficiente para mi... es la que",
+        'he querido tener, he querido llorar, he querido amar y estar ahi para ti. Poder dar la vida por ti... ',
+        'Si, quizas por fuera se observe que hacia mi persona no me basta con solo tener a dos, tres, cinco, diez',
+        'cien "amigos" en mi entorno. Pero sin duda alguna, desde hace un tiempo, he deseado abandonar',
+        "todas ellas, por solo tener una cuya eleccion fue hecha por mi corazon, y es la tuya.",
+        '',
+        '',
+        'Sin duda, este sentimiento a diferencia de otras... No surgio al tener una primera o primeras impresiones',
+        'hacia ti. Es mas, aun no me explico la forma en que se ha creado este sentimiento. Pero se y estoy',
+        'seguro, que no es un gusto ordinario.',
+        '',
+        'Quiero que te tomes tu tiempo y te preguntes a ti misma "¿Como sabes tu que estas enamorada?", ',
+        '"¿Que acciones, actitudes y detalles cambian en ti hacia una persona en particular? " Acaso...',
+        '¿Te has enamorado alguna vez o solo tienes una percepcion de ello? Yo no puedo dar mi garantia absoluta',
+        'De que realemente estoy enamorado de ti, pero si doy garantia de que a diferencia de otras personas...',
+        'yo haria y actuaria de forma inusual. Y no solamente el sentimiento de querer hacerlo, ya que.',
+        'Me nace, de forma inconsciente me causas un desorden y a su vez un orden en mi vida. Desorden por no',
+        'saber se que hacer con este sentmiento hacia ti, y un orden cuando mi vida esta rodeada de problemas las',
+        'cuales con solo un mensaje de ti, o tu presencia pueden llegar a calmar. Sin embargo, el golpe de realidad',
+        'En esta historia de seguro sera dura, no correspondida o simplemente ignorada por tus preferencias',
+        'personaes y que realemente no puedo o podria competir para ganar quizas tu corazon.',
+        '',
+        'Muchas personas me han entregado sus abrazos, pero no sabes cuanto anhelo recibir alguno honesto de ',
+        'parte de ti, algun "te amo" que a pesar de que lo recibi hace poco, no se sintio como uno verdedaro.',
+        'Algun detalle de amor y cariño que si, quizas me lo hallas expresado en distintas formas, formas',
+        'en la que tu sabras como, pero siendo honesto, no ha llegado alguno lo suficiente para quedarme ',
+        'satisfecho siendo solo tu amigo. Quizas no lo vea, o simplemente es el deseo de que me puedas',
+        'querer o quizas amar de una forma que solo a otras personas de manera especial tu se lo obsequies.',
+        '',
+        'Insisto en que desconozco como se vaya a tomar el rumbo de esto, pero sabes bien lo drastico que soy',
+        'y que posiblemente ha llegado el dia que tanto te decia y que no querias ni yo tampoco deseo.',
+        'Y quiero que te quede claro que no es lo que anhelo, pero tampoco quiero ni puedo darme el lujo ',
+        'de estar en una cocina quemandome por el sentimiento y las acciones que hago para ti mientras ',
+        "que estas muy feliz con otra persona disfrutando de lo que cocinan. Que esta claro que no esta mal",
+        "Pero no es lo correcto para mi, y asi como tu cuidas tu integridad y tus responsabilidades...",
+        "me has enseñado que tambien debo hacerlo por mi. ",
+        
+    ];
+
+    doc.setFont('times', 'normal');
+    doc.setFontSize(11.5);
+    doc.setTextColor(220, 210, 195);
+    y += lineH;
+    body.forEach(line => {
+        checkPageBreak(); // Verifica el salto antes de escribir cada línea
+        doc.text(line, marginX, y);
+        y += lineH;
+    });
+
+    // ── Confesión central ──
+    checkPageBreak(lineH * 2); // Asegura que la confesión no quede cortada entre páginas
+    doc.setFont('times', 'bolditalic');
+    doc.setFontSize(14);
+    doc.setTextColor(212, 165, 116);
+    doc.text('Te amo, Fabiola. De una manera que no lo he hecho,en mucho tiempo ', W / 2, y, { align: 'center', maxWidth: W - marginX * 2 });
+    
+    y += lineH + 3;
+    checkPageBreak();
+    doc.setFontSize(11.5);
+    doc.text('Y esta es mi verdad.', W / 2, y, { align: 'center' });
+
+    // ── Cierre ──
+    y += lineH * 2;
+    checkPageBreak(lineH * 2); // Asegura que el cierre quepa completo
+    doc.setFont('times', 'normal');
+    doc.setFontSize(11);
+    doc.setTextColor(180, 160, 130);
+    doc.text('Eres una estrella que deslumbra ante los entes que te rodean.', marginX, y);
+    doc.text('"Brillante, atractiva y la que observo y cuido siempre ",', marginX, y + 8);
+    y += lineH + 4;
+
+    doc.setFont('times', 'bolditalic');
+    doc.setFontSize(13);
+    doc.setTextColor(240, 208, 168);
+    doc.text('Tu amigo, quizas mejor amigo, Yeffry.', marginX, y + 8);
+
+    // ── Pie de página (Se dibuja solo en la última página o iterando si se desea en todas) ──
+    doc.setFont('times', 'italic');
+    doc.setFontSize(8);
+    doc.setTextColor(100, 80, 50);
+    doc.text('Un Viaje de Corazones Estelares.  ·  Fase III · El Omega', W / 2, H - 16, { align: 'center' });
+    doc.setFontSize(7);
+    doc.text('✦  ✦  ✦', W / 2, H - 11, { align: 'center' });
+
+    // ── Guardar ──
+    doc.save('carta-de-confesion-fabiola.pdf');
+
+    if (fb) fb.textContent = '✦ Carta descargada. Que las estrellas guíen su camino.';
+    try { sfxBig(); } catch (e) {}
+}

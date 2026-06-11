@@ -98,6 +98,17 @@ h1, h2, h3, .hero-title, .gate-card h2, .poem-display, .confession-final,
 @keyframes pi-up { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes pi-rule { to { width: min(420px, 70vw); } }
 
+.p3p-line {
+  white-space: pre-wrap !important;
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: clamp(1.2rem, 2.6vw, 1.8rem);
+  color: var(--text);
+  line-height: 1.7;
+  margin: 1.4rem 0;
+  min-height: 1.7em;
+}
+
 /* (2) HUD: mini-constelación de progreso + auto-hide */
 #topbar {
   transition: opacity 0.6s ease, transform 0.6s ease;

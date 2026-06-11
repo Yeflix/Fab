@@ -1639,7 +1639,7 @@ body::before {
     border-right-color: rgba(212, 160, 176, .8);
     border-bottom-color: rgba(180, 120, 220, .7);
     filter: blur(.6px);
-    animation: accretion 1.6s cubic-bezier(.6, 0, .4, 1)
+    animation: accretion 1s cubic-bezier(.6, 0, .4, 1)
 }
 
 .bh-disk:nth-child(3) {
@@ -3771,4 +3771,74 @@ img {
     select {
         font-size: max(16px, 1rem);
     }
+}
+/* ════════════════ FASE 3 — ENTREGA DE CONFESIÓN ════════════════ */
+.delivery-section {
+    margin-top: 2rem;
+    padding: 1.4rem 1rem 1rem;
+    border-top: 1px solid rgba(212,165,116,0.22);
+    text-align: center;
+}
+
+.delivery-label {
+    font-size: .85rem;
+    letter-spacing: .14em;
+    color: var(--gold);
+    margin-bottom: .3rem;
+    text-transform: uppercase;
+}
+
+.delivery-sub {
+    font-size: .92rem;
+    color: var(--text-muted, rgba(232,224,216,.55));
+    margin-bottom: 1.2rem;
+    line-height: 1.6;
+}
+
+.delivery-cards {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: .75rem;
+    margin-bottom: 1.4rem;
+    max-width: 420px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+@media (max-width: 480px) {
+    .delivery-cards { grid-template-columns: 1fr 1fr; }
+}
+
+.delivery-card {
+    background: rgba(212,165,116,.07);
+    border: 1px solid rgba(212,165,116,.2);
+    border-radius: 10px;
+    padding: .85rem .7rem;
+    cursor: pointer;
+    transition: background .2s, border-color .2s, transform .18s;
+    text-align: center;
+}
+
+.delivery-card:hover {
+    background: rgba(212,165,116,.14);
+    border-color: rgba(212,165,116,.5);
+    transform: translateY(-2px);
+}
+
+.delivery-card.selected {
+    background: rgba(212,165,116,.18);
+    border-color: var(--gold);
+    box-shadow: 0 0 14px rgba(212,165,116,.25);
+}
+
+.dc-icon { font-size: 1.6rem; margin-bottom: .35rem; }
+.dc-title { font-size: .82rem; color: var(--gold); letter-spacing: .06em; font-weight: 600; margin-bottom: .28rem; text-transform: uppercase; }
+.dc-desc  { font-size: .78rem; color: rgba(232,224,216,.55); line-height: 1.45; }
+
+.confession-pdf-btn {
+    margin-top: .4rem;
+    font-size: .9rem;
+    letter-spacing: .08em;
+    padding: .75rem 1.6rem;
+    animation: pulseStar 2.4s ease-in-out infinite;
 }
