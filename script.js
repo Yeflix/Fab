@@ -1184,16 +1184,85 @@ function buildPhase2(restore) {
     });
     updateP2Progress(restore);
 }
-function handleFile(i, inp) {
-    const f = inp.files[0], lab = document.getElementById('file-label-' + i), st = document.getElementById('upload-status-' + i),
-        prv = document.getElementById('upload-preview-' + i), card = document.getElementById('problem-card-' + i);
-    if (!f) { lab.classList.remove('has-file'); lab.textContent = '📎 Seleccionar imagen'; st.textContent = ''; prv.classList.remove('show'); card.classList.remove('card-uploaded'); save.uploaded[i] = false; persist(); updateP2Progress(); return; }
-    const r = new FileReader(); r.onload = e => { prv.src = e.target.result; prv.classList.add('show'); }; r.readAsDataURL(f);
-    lab.classList.add('has-file'); lab.textContent = '📎 ' + f.name.substring(0, 22) + (f.name.length > 22 ? '...' : '');
-    st.textContent = '✓ Listo'; st.classList.add('success'); card.classList.add('card-uploaded');
-    save.uploaded[i] = true; persist(); sfxSuccess();
-    createSparkle(lab.getBoundingClientRect().left + 60, lab.getBoundingClientRect().top, 5);
-    updateP2Progress();
+async function handleFile(i, inp) {
+    const f    = inp.files[0];
+    const lab  = document.getElementById('file-label-' + i);
+    const st   = document.getElementById('upload-status-' + i);
+    const prv  = document.getElementById('upload-preview-' + i);
+    const card = document.getElementById('problem-card-' + i);
+
+    // Archivo deseleccionado → resetear
+    if (!f) {
+        lab.classList.remove('has-file', 'uploading');
+        lab.textContent = '📎 Seleccionar imagen';
+        st.textContent  = '';
+        st.className    = 'upload-status';
+        prv.classList.remove('show');
+        card.classList.remove('card-uploaded');
+        save.uploaded[i] = false; persist(); updateP2Progress();
+        return;
+    }
+
+    // Vista previa local inmediata (no espera a que suba)
+    const reader = new FileReader();
+    reader.onload = e => { prv.src = e.target.result; prv.classList.add('show'); };
+    reader.readAsDataURL(f);
+
+    // Estado: subiendo
+    lab.classList.add('has-file', 'uploading');
+    lab.textContent = '⏳ Subiendo…';
+    st.textContent  = 'Transmitiendo al cosmos…';
+    st.className    = 'upload-status uploading';
+    card.classList.remove('card-uploaded');
+
+    try {
+        if (!window._storage) throw new Error('Firebase Storage no inicializado');
+
+        // Comprimir imagen antes de enviar (máx 1200 px, 78 % calidad)
+        const dataUrl  = await compressImageFile(f, 1200, 0.78);
+        const fetchRes = await fetch(dataUrl);
+        const blob     = await fetchRes.blob();
+
+        // Subir a Firebase Storage
+        const storagePath = `phase2-uploads/foto_${i}_${Date.now()}.jpg`;
+        const storageRef  = window._storage.ref(storagePath);
+        const snapshot    = await storageRef.put(blob, { contentType: 'image/jpeg' });
+        const downloadURL = await snapshot.ref.getDownloadURL();
+
+        // Guardar URL + metadatos en Firestore (un doc por foto, sobrescribible)
+        if (window._db) {
+            await window._db.collection('phase2Uploads').doc(`foto_${i}`).set({
+                downloadURL,
+                fileName:     f.name,
+                problemIndex: i,
+                problemTitle: (typeof problems !== 'undefined' && problems[i]) ? problems[i].title : `Problema ${i + 1}`,
+                uploadedAt:   firebase.firestore.FieldValue.serverTimestamp(),
+            });
+        }
+
+        // Estado: éxito
+        const shortName = f.name.length > 24 ? f.name.substring(0, 24) + '…' : f.name;
+        lab.classList.remove('uploading');
+        lab.textContent = '📎 ' + shortName;
+        st.textContent  = '✓ Enviada al cosmos';
+        st.className    = 'upload-status success';
+        card.classList.add('card-uploaded');
+        save.uploaded[i] = true; persist(); sfxSuccess();
+        try { const r = lab.getBoundingClientRect(); createSparkle(r.left + r.width / 2, r.top, 5); } catch (_) {}
+        updateP2Progress();
+
+    } catch (err) {
+        console.error('[Fase II] Error al subir imagen:', err);
+        // Estado: error — permite reintentar
+        lab.classList.remove('has-file', 'uploading');
+        lab.textContent = '⚠ Error — toca para reintentar';
+        st.textContent  = 'Falló la transmisión';
+        st.className    = 'upload-status error';
+        prv.classList.remove('show');
+        card.classList.remove('card-uploaded');
+        save.uploaded[i] = false; persist(); updateP2Progress();
+        showToast('❌ Error al subir. Verifica tu conexión.');
+    }
 }
 function updateP2Progress(restore) {
     const cnt = save.uploaded.filter(Boolean).length;
@@ -2540,8 +2609,7 @@ const PLAYLIST = [
     { name: "Neutron Star Collision", src: "./2.mp3" },
     { name: "Roman Sky", src: "./3.mp3" },
     { name: "Starlight", src: "./4.mp3" },
-    { name: "Марианская впадина", src: "./5.mp3" },
-    { name: "Exist", src: "./6.mp3" }
+    { name: "Марианская впадина", src: "./5.mp3" }
 ];
 let currentTrackIndex = 0;
 
@@ -2872,14 +2940,14 @@ function downloadConfessionPDF() {
         'saber se que hacer con este sentmiento hacia ti, y un orden cuando mi vida esta rodeada de problemas las',
         'cuales con solo un mensaje de ti, o tu presencia pueden llegar a calmar. Sin embargo, el golpe de realidad',
         'En esta historia de seguro sera dura, no correspondida o simplemente ignorada por tus preferencias',
-        'personaes y que realemente no puedo o podria competir para ganar quizas tu corazon.',
+        'personales y que realmente no puedo o podria competir para ganar quizas tu corazon.',
         '',
         'Muchas personas me han entregado sus abrazos, pero no sabes cuanto anhelo recibir alguno honesto de ',
         'parte de ti, algun "te amo" que a pesar de que lo recibi hace poco, no se sintio como uno verdedaro.',
         'Algun detalle de amor y cariño que si, quizas me lo hallas expresado en distintas formas, formas',
         'en la que tu sabras como, pero siendo honesto, no ha llegado alguno lo suficiente para quedarme ',
         'satisfecho siendo solo tu amigo. Quizas no lo vea, o simplemente es el deseo de que me puedas',
-        'querer o quizas amar de una forma que solo a otras personas de manera especial tu se lo obsequies.',
+        'querer o quizas amar de una forma que solo a otras personas de manera especial tu se lo obsequias.',
         '',
         'Insisto en que desconozco como se vaya a tomar el rumbo de esto, pero sabes bien lo drastico que soy',
         'y que posiblemente ha llegado el dia que tanto te decia y que no querias ni yo tampoco deseo.',

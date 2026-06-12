@@ -40,9 +40,6 @@
         <button class="btn small" onclick="selectInitialSong(4)">
           ✦ Марианская впадина
         </button>
-        <button class="btn small" onclick="selectInitialSong(5)">
-          ✦ Exist
-        </button>
       </div>
     </div>
   </div>
@@ -561,6 +558,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
 
   <script>
     // Configuración de tu aplicación web de Firebase
@@ -580,6 +578,9 @@
 
     // 3. Inicializar Firestore y asignarlo a window._db para que script.js lo reconozca
     window._db = firebase.firestore();
+
+    // 4. Inicializar Firebase Storage para las subidas de Fase II
+    window._storage = firebase.storage();
   </script>
 
   <script src="./script.js"></script>
