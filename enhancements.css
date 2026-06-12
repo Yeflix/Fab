@@ -66,7 +66,7 @@ h1, h2, h3, .hero-title, .gate-card h2, .poem-display, .confession-final,
   background: radial-gradient(60% 60% at 50% 50%, rgba(0,0,0,0.85), rgba(0,0,0,0.98));
   opacity: 0; pointer-events: none;
 }
-#phase-intro-overlay.show { display: flex; animation: pi-fade 3.6s ease forwards; pointer-events: all; }
+#phase-intro-overlay.show { display: flex; animation: pi-fade 5s ease forwards; pointer-events: all; }
 @keyframes pi-fade {
   0% { opacity: 0; }
   15% { opacity: 1; }
@@ -271,7 +271,7 @@ body:has(#menu-screen.active) #topbar { display: none !important; }
 }
 body[data-quality="low"] .hud-constellation .hc-dot { box-shadow: none !important; }
 body[data-quality="low"] .map-link-svg line.lit { filter: none !important; animation: none !important; }
-body[data-quality="low"] #phase-intro-overlay { animation-duration: 2s !important; }
+body[data-quality="low"] #phase-intro-overlay { animation-duration: 4s !important; }
 
 /* ───────────── ESTRATEGIA FASE III · Preámbulo lento ───────────── */
 #phase3-preamble {

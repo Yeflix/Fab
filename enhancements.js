@@ -38,6 +38,7 @@
       3: { eyebrow: 'FASE III', title: 'El Omega', sub: 'Donde toda luz converge.' },
     };
     let lastIntroPhase = 0;
+    let _introTimer = null; // FIX: guarda el ID para poder cancelar timers huérfanos
     function playPhaseIntro(phase) {
       if (!PHASE_INTROS[phase] || lastIntroPhase === phase) return;
       lastIntroPhase = phase;
@@ -49,8 +50,17 @@
       $('#pi-sub').textContent = data.sub;
       ov.classList.remove('show'); void ov.offsetWidth;
       ov.classList.add('show');
-      const dur = reduced() ? 1400 : 3600;
-      setTimeout(() => ov.classList.remove('show'), dur);
+      // FIX (1): cancela cualquier timer previo antes de crear uno nuevo.
+      // Sin esto, si el usuario sale y vuelve rápido, el timer huérfano
+      // dispara classList.remove('show') a mitad de la nueva animación.
+      if (_introTimer) { clearTimeout(_introTimer); _introTimer = null; }
+      // FIX (2): 3600 → 5000 para coincidir con la duración real de pi-fade (5s).
+      // Con 3600ms el overlay desaparecía 400ms antes de que empezara el
+      // keyframe de fade-out (80 %→100 %, 4000–5000ms), resultando en un
+      // corte abrupto. Con 5000ms se deja completar la animación y el
+      // overlay se retira cuando ya está en opacidad 0 (fill: forwards).
+      const dur = reduced() ? 1400 : 5000;
+      _introTimer = setTimeout(() => { _introTimer = null; ov.classList.remove('show'); }, dur);
     }
 
     /* (2) Mini-constelación de progreso en HUD */
