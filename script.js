@@ -1281,7 +1281,7 @@ function buildPhase3() {
 
               <!-- ══ PROPUESTAS DE ENTREGA ══ -->
               <div class="delivery-section">
-                <p class="delivery-label">✦ Ahora puedes llevar esta confesión contigo ✦</p>
+                <p class="delivery-label">✦ Descarga el archivo y veras camino. ✦</p>
                 <p class="delivery-sub">Descarga la carta completa como PDF — imprímela, guárdala o compártela como prefieras.</p>
                 <div class="delivery-cards">
                   <div class="delivery-card" onclick="selectDelivery(this,'imprimir')">
@@ -1306,7 +1306,7 @@ function buildPhase3() {
                   </div>
                 </div>
                 <button class="btn confession-pdf-btn" id="btn-download-confession" onclick="downloadConfessionPDF()">
-                  ✦ Descargar Carta de Confesión (PDF) ✦
+                  ✦ Descargar Carta (PDF) ✦
                 </button>
                 <div id="pdf-feedback" style="font-size:.85rem;color:var(--gold);margin-top:.6rem;min-height:1.2em;text-align:center;"></div>
               </div>`;
