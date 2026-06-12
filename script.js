@@ -1269,7 +1269,7 @@ function buildPhase3() {
                 <div class="cb-moon"></div>
               </div>
               <p style="font-size:1.05rem;color:var(--text);line-height:1.9;text-align:center;">
-                Este proyecto está inspirado para que puedas conocer una verdad, una confesión que llegó hacia ti de una manera <em>"Inusual"</em>.<br>
+                Este proyecto está inspirado para que puedas conocer una verdad, una verdad que llegó hacia ti de una manera <em>"Inusual"</em>.<br>
                 La importancia que tienes en mi vida no es ínfima. Cada pensamiento, cada acción, cada momento que compartimos es especial para mí.
               </p>
               <div class="confession-final">
@@ -2807,7 +2807,7 @@ function downloadConfessionPDF() {
     doc.setFont('times', 'bolditalic');
     doc.setFontSize(20);
     doc.setTextColor(240, 208, 168);
-    doc.text('Carta de Confesión', W / 2, y, { align: 'center' });
+    doc.text('Carta', W / 2, y, { align: 'center' });
 
     // ── Subtítulo ──
     y += 8;
@@ -2935,7 +2935,7 @@ function downloadConfessionPDF() {
     doc.text('✦  ✦  ✦', W / 2, H - 11, { align: 'center' });
 
     // ── Guardar ──
-    doc.save('carta-de-confesion-fabiola.pdf');
+    doc.save('carta-de-fabiola.pdf');
 
     if (fb) fb.textContent = '✦ Carta descargada. Que las estrellas guíen su camino.';
     try { sfxBig(); } catch (e) {}
