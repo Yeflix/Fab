@@ -1301,8 +1301,8 @@ function buildPhase3() {
                   </div>
                   <div class="delivery-card" onclick="selectDelivery(this,'guardar')">
                     <div class="dc-icon">✨</div>
-                    <div class="dc-title">Guardar el Secreto</div>
-                    <div class="dc-desc">Guárdala por ahora. El momento correcto siempre llega.</div>
+                    <div class="dc-title">Guardar el Sentimiento</div>
+                    <div class="dc-desc">Guárdala por ahora.</div>
                   </div>
                 </div>
                 <button class="btn confession-pdf-btn" id="btn-download-confession" onclick="downloadConfessionPDF()">
