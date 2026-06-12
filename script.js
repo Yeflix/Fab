@@ -2535,8 +2535,8 @@ document.addEventListener('keydown', (e) => {
 init();
 /* ════════════════ SINTONIZACIÓN INICIAL SINFÓNICA ════════════════ */
 const PLAYLIST = [
-    { name: "Exogenesis Symphony Part 3", src: "./exogenesis_symphony_p3.mp3" },
-    { name: "Neutron Star Collision", src: "./Muse - Neutron Star Collision (Love is Forever) HD.mp3" }
+    { name: "Exogenesis Symphony Part 3", src: "./1.mp3" },
+    { name: "Neutron Star Collision", src: "./2.mp3" }
 ];
 let currentTrackIndex = 0;
 
