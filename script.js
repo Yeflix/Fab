@@ -2534,9 +2534,12 @@ document.addEventListener('keydown', (e) => {
 });
 init();
 /* ════════════════ SINTONIZACIÓN INICIAL SINFÓNICA ════════════════ */
+/* ════════════════ SINTONIZACIÓN INICIAL SINFÓNICA ════════════════ */
 const PLAYLIST = [
     { name: "Exogenesis Symphony Part 3", src: "./1.mp3" },
-    { name: "Neutron Star Collision", src: "./2.mp3" }
+    { name: "Neutron Star Collision", src: "./2.mp3" },
+    { name: "Roman Sky", src: "./3.mp3" },
+    { name: "Starlight", src: "./4.mp3" }
 ];
 let currentTrackIndex = 0;
 
