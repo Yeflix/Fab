@@ -138,6 +138,52 @@
   </div>
 
   <!-- WELCOME OVERLAY (first visit / manual open) -->
+  <!-- ── CHANGELOG / NOTAS DE VERSIÓN ─────────────────────────────────────── -->
+  <div id="changelog-overlay" role="dialog" aria-modal="true" aria-labelledby="cl-title"
+    style="position:fixed;inset:0;z-index:260;display:none;align-items:center;justify-content:center;padding:1rem;background:radial-gradient(circle at center,rgba(10,20,40,.88),rgba(0,0,0,.97));backdrop-filter:blur(12px)">
+    <div class="gate-card cl-card" style="max-width:500px;text-align:left">
+
+      <!-- Cabecera -->
+      <div style="display:flex;align-items:center;gap:.8rem;margin-bottom:.2rem">
+        <span class="cl-badge">v2.0</span>
+        <h2 id="cl-title" class="gate-title" style="margin:0;font-size:1.15rem;letter-spacing:.12em">NOTAS DE VERSIÓN</h2>
+      </div>
+      <p class="gate-sub" style="margin-bottom:1.1rem;font-size:.78rem">Un Viaje entre Estrellas · 13 de junio, 2026</p>
+
+      <!-- Lista de cambios -->
+      <ul class="cl-list">
+        <li>
+          <span class="cl-tag tag-new">NUEVO</span>
+          <div>
+            <strong>Subida de imágenes hacia Google Drive</strong>
+            <p>Las soluciones fotográficas de la Fase II ahora viajan directo a una carpeta privada en Drive, con registro automático de fecha y problema.</p>
+          </div>
+        </li>
+        <li>
+          <span class="cl-tag tag-new">NUEVO</span>
+          <div>
+            <strong>Canción: Exist — Dreamtheater</strong>
+            <p>Se añadió <em>Exist</em> como nueva pista seleccionable en el reproductor inicial. La lista de reproducción crece.</p>
+          </div>
+        </li>
+        <li>
+          <span class="cl-tag tag-fix">FIX</span>
+          <div>
+            <strong>Cinemáticas con corte a mitad de animación</strong>
+            <p>Corregido timer huérfano que interrumpía las introducciones de fase al navegar rápido. Las animaciones ahora completan su ciclo de 5 s.</p>
+          </div>
+        </li>
+      </ul>
+
+      <!-- Pie -->
+      <div class="gate-actions" style="margin-top:1.2rem;justify-content:space-between;flex-wrap:wrap;gap:.5rem">
+        <span class="cl-version-hint">¿Qué hay de nuevo? Cada actualización aquí.</span>
+        <button class="btn small" onclick="closeChangelog()">CONTINUAR ✦</button>
+      </div>
+    </div>
+  </div>
+  <!-- ───────────────────────────────────────────────────────────────────────── -->
+
   <div id="welcome-overlay" role="dialog" aria-modal="true" aria-labelledby="welcome-title"
     style="position:fixed; inset:0; z-index:250; display:none; align-items:center; justify-content:center; padding:1rem; background:radial-gradient(circle at center, rgba(20,10,40,.85), rgba(0,0,0,.96)); backdrop-filter:blur(10px)">
     <div class="gate-card" style="max-width:480px; text-align:left">
@@ -561,7 +607,6 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
 
   <script>
     // Configuración de tu aplicación web de Firebase
@@ -581,9 +626,6 @@
 
     // 3. Inicializar Firestore y asignarlo a window._db para que script.js lo reconozca
     window._db = firebase.firestore();
-
-    // 4. Inicializar Firebase Storage para las subidas de Fase II
-    window._storage = firebase.storage();
   </script>
 
   <script src="./script.js"></script>

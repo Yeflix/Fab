@@ -1184,6 +1184,13 @@ function buildPhase2(restore) {
     });
     updateP2Progress(restore);
 }
+// ─── URL del Google Apps Script desplegado como Web App ───────────────────────
+// Reemplaza este valor con la URL que obtienes al hacer Deploy en Apps Script.
+// Guía: script.google.com → Nuevo proyecto → pega el código → Implementar →
+//       Web App → "Ejecutar como: Yo" · "Quién puede acceder: Cualquier persona"
+const DRIVE_UPLOAD_ENDPOINT = 'https://script.google.com/macros/s/AKfycbwqjrntt-Mn7EjWDQZwulr5TZcM2FQKbjAoVa4UPi6gXfwOwfzhLdFlBKoe_vWN5g8HiQ/exec';
+// ──────────────────────────────────────────────────────────────────────────────
+
 async function handleFile(i, inp) {
     const f    = inp.files[0];
     const lab  = document.getElementById('file-label-' + i);
@@ -1203,6 +1210,13 @@ async function handleFile(i, inp) {
         return;
     }
 
+    // Validación básica de tipo
+    if (!f.type.startsWith('image/')) {
+        showToast('⚠ Solo se aceptan imágenes.');
+        inp.value = '';
+        return;
+    }
+
     // Vista previa local inmediata (no espera a que suba)
     const reader = new FileReader();
     reader.onload = e => { prv.src = e.target.result; prv.classList.add('show'); };
@@ -1216,29 +1230,30 @@ async function handleFile(i, inp) {
     card.classList.remove('card-uploaded');
 
     try {
-        if (!window._storage) throw new Error('Firebase Storage no inicializado');
+        if (!DRIVE_UPLOAD_ENDPOINT || DRIVE_UPLOAD_ENDPOINT.includes('PEGA_AQUI')) {
+            throw new Error('Configura DRIVE_UPLOAD_ENDPOINT en script.js');
+        }
 
         // Comprimir imagen antes de enviar (máx 1200 px, 78 % calidad)
-        const dataUrl  = await compressImageFile(f, 1200, 0.78);
-        const fetchRes = await fetch(dataUrl);
-        const blob     = await fetchRes.blob();
+        const dataUrl = await compressImageFile(f, 1200, 0.78);
 
-        // Subir a Firebase Storage
-        const storagePath = `phase2-uploads/foto_${i}_${Date.now()}.jpg`;
-        const storageRef  = window._storage.ref(storagePath);
-        const snapshot    = await storageRef.put(blob, { contentType: 'image/jpeg' });
-        const downloadURL = await snapshot.ref.getDownloadURL();
+        const problemTitle = (typeof problems !== 'undefined' && problems[i])
+            ? problems[i].title
+            : `Problema ${i + 1}`;
 
-        // Guardar URL + metadatos en Firestore (un doc por foto, sobrescribible)
-        if (window._db) {
-            await window._db.collection('phase2Uploads').doc(`foto_${i}`).set({
-                downloadURL,
-                fileName:     f.name,
+        // POST al Apps Script con mode:'no-cors' (el script recibe igual;
+        // no podemos leer la respuesta pero la imagen sí llega a Drive).
+        await fetch(DRIVE_UPLOAD_ENDPOINT, {
+            method:  'POST',
+            mode:    'no-cors',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({
+                image:        dataUrl,
+                fileName:     `Problema_${i + 1}_${Date.now()}.jpg`,
                 problemIndex: i,
-                problemTitle: (typeof problems !== 'undefined' && problems[i]) ? problems[i].title : `Problema ${i + 1}`,
-                uploadedAt:   firebase.firestore.FieldValue.serverTimestamp(),
-            });
-        }
+                problemTitle,
+            }),
+        });
 
         // Estado: éxito
         const shortName = f.name.length > 24 ? f.name.substring(0, 24) + '…' : f.name;
@@ -1253,7 +1268,6 @@ async function handleFile(i, inp) {
 
     } catch (err) {
         console.error('[Fase II] Error al subir imagen:', err);
-        // Estado: error — permite reintentar
         lab.classList.remove('has-file', 'uploading');
         lab.textContent = '⚠ Error — toca para reintentar';
         st.textContent  = 'Falló la transmisión';
@@ -2562,9 +2576,39 @@ function init() {
     applyStoredMusic();
     refreshMenu();
     showTopbar(false);
+    maybeShowChangelog(); // muestra changelog (v nueva) → luego welcome si aplica
+}
+
+
+/* ════════════════ WELCOME DIALOG ════════════════ */
+/* ════════════════ CHANGELOG / NOTAS DE VERSIÓN ════════════════ */
+// Incrementa este string cada vez que haya cambios para que Fabiola
+// vea el aviso aunque ya haya pasado el welcome anterior.
+const APP_VERSION    = '2.0';
+const CHANGELOG_KEY  = 'fabiola_changelog_seen_v' + APP_VERSION;
+
+function openChangelog() {
+    const el = document.getElementById('changelog-overlay');
+    if (!el) return;
+    el.style.display = 'flex';
+    try { sfxClick(); } catch (_) {}
+}
+
+function closeChangelog() {
+    const el = document.getElementById('changelog-overlay');
+    if (!el) return;
+    el.style.display = 'none';
+    try { localStorage.setItem(CHANGELOG_KEY, '1'); } catch (_) {}
+    try { sfxClick(); } catch (_) {}
+    // Después del changelog mostrar el welcome si todavía no lo vio
     maybeShowWelcome();
 }
 
+function maybeShowChangelog() {
+    try { if (localStorage.getItem(CHANGELOG_KEY)) { maybeShowWelcome(); return; } } catch (_) {}
+    // Primera vez que ve esta versión: mostrar changelog en lugar del welcome
+    setTimeout(openChangelog, 350);
+}
 
 /* ════════════════ WELCOME DIALOG ════════════════ */
 const WELCOME_KEY = 'fabiola_welcome_seen_v1';
