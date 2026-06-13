@@ -2609,7 +2609,8 @@ const PLAYLIST = [
     { name: "Neutron Star Collision", src: "./2.mp3" },
     { name: "Roman Sky", src: "./3.mp3" },
     { name: "Starlight", src: "./4.mp3" },
-    { name: "Марианская впадина", src: "./5.mp3" }
+    { name: "Марианская впадина", src: "./5.mp3" },
+    { name: "Exist", src: "./6.mp3" }
 ];
 let currentTrackIndex = 0;
 

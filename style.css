@@ -1123,6 +1123,23 @@ body::before {
     color: var(--success)
 }
 
+.upload-status.uploading {
+    color: var(--accent);
+    animation: cosmicPulse 1.4s ease-in-out infinite;
+}
+
+.upload-status.error {
+    color: #e07878;
+}
+
+.file-label.uploading {
+    border-color: var(--accent);
+    color: var(--accent);
+    border-style: dashed;
+    cursor: not-allowed;
+    opacity: 0.75;
+}
+
 .upload-preview {
     max-width: 110px;
     max-height: 80px;
