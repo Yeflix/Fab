@@ -3,7 +3,7 @@ name: Deploy to Firebase Hosting
 on:
   push:
     branches:
-      - main  # Cambia a 'master' si tu rama principal se llama así
+      - main
 
 jobs:
   deploy:
@@ -12,12 +12,10 @@ jobs:
       - name: Checkout de código
         uses: actions/checkout@v4
 
-      # Si tu web usa React/Vite/Svelte, descomenta las siguientes dos líneas para compilar antes de subir:
-      # - name: Instalar dependencias y compilar
-      #   run: npm ci && npm run build
-
-      - name: Instalar Firebase CLI
-        run: npm install -g firebase-tools
-
       - name: Desplegar a Firebase Hosting
-        run: firebase deploy --only hosting --token "${{ secrets.FIREBASE_TOKEN }}"
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: "${{ secrets.GITHUB_TOKEN }}"
+          firebaseServiceAccount: "${{ secrets.FIREBASE_SERVICE_ACCOUNT }}"
+          channelId: live
+          projectId: fbpd-83d58
