@@ -2108,7 +2108,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const scrollable = sh > ih + 60;
         const nearBottom = sy + ih >= sh - 40;
         // Solo lo mostramos en pantallas de juego/galería/mapa, no en menú
-        const okScreen = ['phase1-screen', 'phase2-screen', 'phase3-screen', 'map-screen', 'gallery-screen', 'progress-screen', 'settings-screen', 'credits-screen', 'capsule-screen'].includes(currentScreen);
+        const okScreen = ['phase1-screen', 'phase2-screen', 'phase3-screen', 'map-screen', 'gallery-screen', 'progress-screen', 'settings-screen', 'credits-screen'].includes(currentScreen);
         el.classList.toggle('visible', okScreen && scrollable && !nearBottom);
     }
     // Throttle para no saturar móviles

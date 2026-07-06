@@ -955,7 +955,6 @@ body::before {
     font-size: .72rem;
     cursor: pointer;
     margin-top: .3rem;
-    padding: .35rem .2rem;
     text-decoration: underline;
     letter-spacing: .06em;
     font-family: var(--font-main)
@@ -3220,12 +3219,8 @@ body::before {
     position: absolute;
     top: .4rem;
     right: .4rem;
-    /* FIX: mismo problema que .icon-btn — 28px queda por debajo del mínimo
-       táctil recomendado, especialmente sobre miniaturas de 96px en móvil. */
-    width: 32px;
-    height: 32px;
-    min-width: 32px;
-    min-height: 32px;
+    width: 28px;
+    height: 28px;
     border-radius: 50%;
     background: rgba(0, 0, 0, .65);
     color: #fff;
@@ -4302,32 +4297,4 @@ body[data-phase="3"] .hud-progress { box-shadow: 0 0 0 1px rgba(212,160,176,.12)
 @media (max-width: 480px) {
     .map-memory-node .lbl { max-width: 60px; font-size: .55rem; }
     .map-memory-star { width: 18px; height: 18px; }
-}
-
-/* ══════════════ CÁPSULA DEL TIEMPO — ajuste fino en pantallas chicas ══════════════
-   (la pantalla es nueva y no había recibido el mismo pulido de tamaños que
-   el resto de pantallas del proyecto en los breakpoints ≤480px/≤360px) */
-@media (max-width: 480px) {
-    .capsule-orb {
-        width: 76px;
-        height: 76px;
-        margin-bottom: 1rem;
-    }
-    .capsule-countdown {
-        font-size: 1.3rem;
-    }
-    .capsule-hint {
-        font-size: .78rem;
-        max-width: 100%;
-    }
-}
-@media (max-width: 360px) {
-    .capsule-orb {
-        width: 64px;
-        height: 64px;
-    }
-    .capsule-countdown {
-        font-size: 1.1rem;
-        letter-spacing: .06em;
-    }
 }

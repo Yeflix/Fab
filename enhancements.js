@@ -237,14 +237,7 @@
       // superpuestos. Conservamos el hover-preview, que sí es aditivo.
 
       // hover preview
-      // FIX: decorateMap() puede re-ejecutarse varias veces sobre los mismos
-      // nodos (el MutationObserver de abajo dispara en cualquier cambio de
-      // clase dentro de #app, no solo al reconstruir el mapa). Sin esta
-      // marca, cada pasada sumaba un par nuevo de listeners mouseenter/
-      // mouseleave al mismo nodo en vez de reutilizar los ya puestos.
       nodes.forEach((n) => {
-        if (n.dataset.hoverBound) return;
-        n.dataset.hoverBound = '1';
         n.addEventListener('mouseenter', () => {
           const title = n.getAttribute('data-title') || n.querySelector('.map-title, h3, h2')?.textContent || 'Fase';
           const meta = n.getAttribute('data-meta') ||
