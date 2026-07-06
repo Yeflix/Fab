@@ -125,8 +125,10 @@
         return r;
       };
     }
-    // refresco periódico defensivo
-    setInterval(() => { syncPhaseAttr(); renderConstellation(); }, 1200);
+    // Reacciona a persist() en vez de sondear cada 1200ms (evento disparado desde script.js)
+    document.addEventListener('save-changed', () => { syncPhaseAttr(); renderConstellation(); });
+    // Safety-net muy poco frecuente por si algo muta `save` sin pasar por persist()
+    setInterval(() => { syncPhaseAttr(); renderConstellation(); }, 5000);
 
     /* Wrapper de showScreen para disparar intro al entrar en fase */
     if (typeof window.showScreen === 'function') {
@@ -204,7 +206,10 @@
         }
       }
     });
-    mo.observe(document.body, { subtree: true, attributes: true, attributeFilter: ['class', 'data-errored'] });
+    // Se observa solo el contenedor de pantallas (no todo document.body) para no
+    // procesar mutaciones irrelevantes del HUD/canvas/overlays en cada frame.
+    const screensRoot = document.getElementById('app') || document.body;
+    mo.observe(screensRoot, { subtree: true, attributes: true, attributeFilter: ['class', 'data-errored'] });
     // expose for manual calls desde script.js si quieres
     window.fxError = feedbackError;
     window.fxSuccess = feedbackSuccess;
@@ -266,7 +271,7 @@
       try { if (typeof unlockAchievement === 'function') unlockAchievement('voyager'); } catch (e) { }
     }
     new MutationObserver(() => { if ($('#map-screen')?.classList.contains('active')) setTimeout(decorateMap, 100); })
-      .observe(document.body, { subtree: true, attributes: true, attributeFilter: ['class'] });
+      .observe(screensRoot, { subtree: true, attributes: true, attributeFilter: ['class'] });
 
     /* (6) Adaptive quality real · si FPS bajo, forzar low */
     let last = performance.now(), frames = 0, low = 0;
@@ -288,8 +293,6 @@
     function typeLine(p) {
   return new Promise((resolve) => {
     let text = p.getAttribute('data-text') || '';
-    // 🔍 Depuración: muestra el texto real en consola (borrar después)
-    console.log('[typeLine] texto:', JSON.stringify(text));
 
     // Si está vacío, no hacer nada
     if (!text) return resolve();
@@ -359,7 +362,7 @@
     // Disparar el preámbulo automáticamente cuando se desbloquea fase 3 y aún no se ha completado
     // Hook sobre cambios en save.phase
     let lastPhase = (typeof save !== 'undefined' && save) ? save.phase : 0;
-    setInterval(() => {
+    function checkPhase3Trigger() {
   try {
     if (!save) return;
     const gateActive = document.getElementById('gate-overlay')?.classList.contains('active');
@@ -369,7 +372,11 @@
     }
     lastPhase = save.phase;
   } catch (e) { }
-}, 600);
+}
+    // Se dispara justo cuando script.js llama persist() (evento 'save-changed'),
+    // en vez de sondear cada 600ms.
+    document.addEventListener('save-changed', checkPhase3Trigger);
+    checkPhase3Trigger();
 
     // Expose para invocar manualmente desde consola/tests
     window.playPhase3Preamble = playPhase3Preamble;

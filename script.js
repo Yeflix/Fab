@@ -42,7 +42,11 @@ function loadSave() {
     } catch (e) { }
     return null;
 }
-function persist() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) { } updateHUD(); }
+function persist() {
+    try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) { }
+    updateHUD();
+    try { document.dispatchEvent(new CustomEvent('save-changed')); } catch (e) { }
+}
 function wipeSave() {
     localStorage.removeItem(SAVE_KEY); save = null;
     showToast('Progreso borrado. Todo vuelve al inicio.');
@@ -2850,9 +2854,33 @@ function playTrack(index) {
         resume: resumeBg,
     };
 })();
-function downloadConfessionPDF() {
+// jsPDF ya no se carga en cada visita: se descarga bajo demanda la primera vez
+// que el usuario pulsa "descargar PDF", así el peso inicial de la página baja.
+let _jsPDFLoadPromise = null;
+function loadJsPDF() {
+    if (window.jspdf && window.jspdf.jsPDF) return Promise.resolve();
+    if (_jsPDFLoadPromise) return _jsPDFLoadPromise;
+    _jsPDFLoadPromise = new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+        s.onload = () => resolve();
+        s.onerror = () => { _jsPDFLoadPromise = null; reject(new Error('No se pudo cargar jsPDF')); };
+        document.head.appendChild(s);
+    });
+    return _jsPDFLoadPromise;
+}
+async function downloadConfessionPDF() {
     try { sfxClick(); } catch (e) {}
     const fb = document.getElementById('pdf-feedback');
+
+    if (!(window.jspdf && window.jspdf.jsPDF)) {
+        if (fb) fb.textContent = '⏳ Cargando el generador de PDF…';
+        try { await loadJsPDF(); }
+        catch (e) {
+            if (fb) fb.textContent = '⚠ No se pudo cargar la librería PDF. Revisa tu conexión e intenta de nuevo.';
+            return;
+        }
+    }
 
     // jsPDF se carga desde CDN como window.jspdf.jsPDF
     const jsPDFCtor = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;

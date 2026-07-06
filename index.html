@@ -7,8 +7,9 @@
   <title>✦ Un Viaje entre Estrellas</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <!-- Pesos recortados a los realmente usados en style.css/enhancements.css (400/500/600 + 400 itálica) -->
   <link rel="stylesheet"
-    href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Inter:wght@400;500;600;700&display=swap">
+    href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Inter:wght@400;600&display=swap">
   <link rel="stylesheet" href="./style.css">
   <link rel="stylesheet" href="./enhancements.css">
 </head>
@@ -52,8 +53,8 @@
   <!-- TOP BAR / HUD -->
   <div id="topbar" class="hidden">
     <div class="hud-left">
-      <button class="icon-btn" id="btn-home" title="Menú principal">⌂</button>
-      <button class="icon-btn" id="btn-map" title="Mapa estelar">✦</button>
+      <button class="icon-btn" id="btn-home" title="Menú principal" aria-label="Menú principal">⌂</button>
+      <button class="icon-btn" id="btn-map" title="Mapa estelar" aria-label="Mapa estelar">✦</button>
     </div>
     <div class="hud-progress" id="hud-progress" style="display:none">
       <span class="lbl" id="hud-lbl">Fase 0/3</span>
@@ -64,8 +65,8 @@
       <span class="hud-stars" id="hud-stars">★ 0</span>
     </div>
     <div class="hud-right">
-      <button class="icon-btn" id="btn-mute" title="Sonido">🔊</button>
-      <button class="icon-btn" id="btn-settings" title="Ajustes">⚙</button>
+      <button class="icon-btn" id="btn-mute" title="Sonido" aria-label="Silenciar sonido">🔊</button>
+      <button class="icon-btn" id="btn-settings" title="Ajustes" aria-label="Ajustes">⚙</button>
     </div>
   </div>
 
@@ -128,7 +129,7 @@
         la clave que solo <strong>Yefferson</strong> conoce.</p>
       <input type="password" class="gate-input" id="gate-input" placeholder="• • • • • • •" autocomplete="off"
         spellcheck="false" maxlength="64">
-      <div class="gate-msg" id="gate-msg"></div>
+      <div class="gate-msg" id="gate-msg" aria-live="polite"></div>
       <div class="gate-actions">
         <button class="btn small ghost" onclick="closeGate()">CANCELAR</button>
         <button class="btn small" id="gate-submit" onclick="submitGate()">DESBLOQUEAR ✦</button>
@@ -230,7 +231,7 @@
     <!-- MENU / PORTAL -->
     <div class="screen active" id="menu-screen">
       <div class="constellation-hint">✧ · · ✦ · · ✧</div>
-      <h1 class="cosmic-title">Ф а б и о л а, Estare esperando con ansias ese libro y ese "Seguro".</h1>
+      <h1 class="cosmic-title">Ф а б и о л а, Gracias.</h1>
       <p class="subtitle">Un viaje entre estrellas, ecuaciones y recuerdos</p>
       <div class="menu-stack">
         <button class="btn menu-btn phase-nav" id="btn-continue" style="display:none" onclick="continueGame()">CONTINUAR
@@ -604,7 +605,7 @@
       aria-label="Cerrar">✕</button>
     <img alt="Recuerdo en grande">
   </div>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <!-- jsPDF ya no se carga aquí: script.js lo descarga bajo demanda al pulsar "descargar PDF" -->
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 

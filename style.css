@@ -3800,6 +3800,36 @@ body {
     -webkit-backdrop-filter: none !important;
 }
 
+/* Apilar varios backdrop-filter: blur() es de lo más costoso en GPU en gama baja.
+   Se desactivan aquí y se compensa con un fondo algo más opaco para mantener contraste. */
+.perf-low .icon-btn,
+.perf-low .hud-progress,
+.perf-low #toast,
+.perf-low .ach-pop,
+.perf-low .gallery-lightbox,
+.perf-low #scroll-hint,
+.perf-low #gate-overlay,
+.perf-low .music-overlay,
+.perf-low #changelog-overlay {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+
+.perf-low .icon-btn,
+.perf-low .hud-progress {
+    background: rgba(13, 13, 36, .82) !important;
+}
+
+.perf-low #toast,
+.perf-low .ach-pop {
+    background: rgba(15, 15, 35, .97) !important;
+}
+
+.perf-low #gate-overlay,
+.perf-low .music-overlay {
+    background: rgba(0, 0, 0, .96) !important;
+}
+
 #welcome-overlay,
 .music-overlay,
 #gate-overlay {
