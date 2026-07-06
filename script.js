@@ -1,4 +1,33 @@
 "use strict";
+/* ════════════════ MANEJO DE ERRORES GLOBALES ════════════════ */
+// Si algo falla a mitad de una fase, evitamos que la pantalla se quede
+// muda: avisamos con un toast amigable y ofrecemos reintentar sin perder save.
+let _lastErrorToastAt = 0;
+function _handleGlobalError(err) {
+    try { console.error('Error capturado:', err); } catch (e) { }
+    const now = Date.now();
+    if (now - _lastErrorToastAt < 4000) return; // evita saturar si el error se repite en cascada
+    _lastErrorToastAt = now;
+    try {
+        showToast('✦ Algo se desalineó en el cosmos. Tu progreso está a salvo.', 4200);
+        showRetryScreenButton();
+    } catch (e) { /* si hasta el toast falla, no hay mucho más que hacer */ }
+}
+window.addEventListener('error', (e) => _handleGlobalError(e.error || e.message));
+window.addEventListener('unhandledrejection', (e) => _handleGlobalError(e.reason));
+function showRetryScreenButton() {
+    const btn = document.getElementById('retry-screen-btn');
+    if (!btn) return;
+    btn.classList.add('show');
+    clearTimeout(btn._hideT);
+    btn._hideT = setTimeout(() => btn.classList.remove('show'), 7000);
+}
+function retryCurrentScreen() {
+    const btn = document.getElementById('retry-screen-btn');
+    if (btn) btn.classList.remove('show');
+    try { showScreen(currentScreen || 'menu-screen'); } catch (e) { location.reload(); }
+}
+
 /* ════════════════ SETTINGS & SAVE ════════════════ */
 const SAVE_KEY = 'fabiola_save_v3';
 const SET_KEY = 'fabiola_settings_v3';
@@ -20,6 +49,8 @@ const ACHIEVEMENTS = [
     { id: 'destiny', ico: '💛', name: 'El Omega', desc: 'Llegar al final del viaje' },
     { id: 'complete', ico: '⭐', name: 'Constelación Completa', desc: 'Completar las 3 fases' },
     { id: 'voyager', ico: '🛰', name: 'Voyager', desc: 'Visitar el mapa estelar' },
+    { id: 'capsule', ico: '🕰', name: 'Mensaje al Futuro', desc: 'Sellar la cápsula del tiempo' },
+    { id: 'capsuleOpen', ico: '🎁', name: 'El Futuro Llegó', desc: 'Abrir la cápsula del tiempo' },
 ];
 
 function freshSave() {
@@ -34,13 +65,40 @@ function freshSave() {
 }
 let save = loadSave();
 function loadSave() {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return null;
     try {
-        const s = JSON.parse(localStorage.getItem(SAVE_KEY)); if (s && s.solvedLetters) {
+        const s = JSON.parse(raw);
+        if (s && s.solvedLetters) {
             if (!s.uploaded) s.uploaded = new Array(4).fill(false);
             return s;
         }
-    } catch (e) { }
-    return null;
+        throw new Error('Forma de guardado inesperada');
+    } catch (e) {
+        console.error('Save corrupto, no se pudo leer:', e);
+        offerCorruptSaveRecovery(raw);
+        return null;
+    }
+}
+// 2.3 — Recuperación ante `save` corrupto: en vez de reiniciar en silencio,
+// avisamos explícitamente y ofrecemos descargar el JSON dañado tal cual,
+// por si se puede rescatar algo a mano.
+function offerCorruptSaveRecovery(raw) {
+    try {
+        const wantsDownload = confirm(
+            'Tu progreso guardado no se pudo leer (el archivo parece dañado).\n\n' +
+            '¿Quieres descargar ese archivo tal cual antes de empezar de nuevo, por si se puede rescatar algo a mano?'
+        );
+        if (wantsDownload) {
+            const blob = new Blob([raw], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = 'save-danado.json';
+            document.body.appendChild(a); a.click(); a.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 4000);
+        }
+    } catch (e) { console.error('No se pudo ofrecer descarga del save dañado:', e); }
+    setTimeout(() => { try { showToast('El progreso anterior no se pudo leer y se reinició desde cero.', 4500); } catch (e) { } }, 400);
 }
 function persist() {
     try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) { }
@@ -56,6 +114,73 @@ function wipeSave() {
 }
 
 function hasProgress() { return !!(save && (save.phase > 1 || save.solvedLetters.some(Boolean) || save.phase1)); }
+
+/* ════════════════ 2.1 — COPIA DE SEGURIDAD (exportar / importar) ════════════════ */
+// Protege contra perder el progreso si cambia de celular o se borra la caché.
+const BACKUP_APP_ID = 'un-viaje-entre-estrellas';
+const BACKUP_KEYS = {
+    save: SAVE_KEY,
+    settings: SET_KEY,
+    gallery: 'fabiola_gallery_v2',
+    draw: 'fabiola_draw_progress_v1',
+    share: 'fabiola_share_v1'
+};
+function exportBackup() {
+    try {
+        const payload = {
+            app: BACKUP_APP_ID,
+            version: (typeof APP_VERSION !== 'undefined' ? APP_VERSION : '1'),
+            exportedAt: new Date().toISOString(),
+            data: {}
+        };
+        let any = false;
+        Object.entries(BACKUP_KEYS).forEach(([name, key]) => {
+            const raw = localStorage.getItem(key);
+            if (raw !== null) { payload.data[name] = raw; any = true; }
+        });
+        if (!any) { showToast('Todavía no hay progreso para respaldar'); return; }
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const stamp = new Date().toISOString().slice(0, 10);
+        const a = document.createElement('a');
+        a.href = url; a.download = `viaje-estrellas-backup-${stamp}.json`;
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 2000);
+        showToast('✦ Copia de seguridad descargada');
+    } catch (e) {
+        console.error('Error exportando backup:', e);
+        showToast('No se pudo generar la copia de seguridad');
+    }
+}
+function triggerImportBackup() {
+    const input = document.getElementById('backup-restore-input');
+    if (input) input.click();
+}
+function importBackupFile(file) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+        try {
+            const payload = JSON.parse(reader.result);
+            if (!payload || payload.app !== BACKUP_APP_ID || !payload.data) {
+                showToast('Ese archivo no parece ser una copia de seguridad válida');
+                return;
+            }
+            const ok = confirm('Esto reemplazará tu progreso, galería y ajustes actuales por los de esta copia. ¿Continuar?');
+            if (!ok) return;
+            Object.entries(BACKUP_KEYS).forEach(([name, key]) => {
+                if (payload.data[name] !== undefined) localStorage.setItem(key, payload.data[name]);
+            });
+            showToast('✦ Copia restaurada. Recargando...');
+            setTimeout(() => location.reload(), 1100);
+        } catch (e) {
+            console.error('Error restaurando backup:', e);
+            showToast('El archivo no se pudo leer. ¿Es un .json válido?');
+        }
+    };
+    reader.onerror = () => showToast('No se pudo leer el archivo');
+    reader.readAsText(file);
+}
 
 function unlockAchievement(id) {
     if (!save) return;
@@ -161,6 +286,12 @@ window.addEventListener('resize', () => {
     }, 250);
 }, { passive: true });
 
+// Opción A, pieza 5: tinte sutil de nebulosa distinto por fase (--phase1/2/3)
+const PHASE_TINT_RGB = { 1: '139,180,208', 2: '212,184,138', 3: '212,160,176' };
+function currentPhaseTint() {
+    const p = (typeof save !== 'undefined' && save) ? Math.min(save.phase || 1, 3) : 1;
+    return PHASE_TINT_RGB[p] || PHASE_TINT_RGB[1];
+}
 function generateNebulaeImage() {
     const w = window.innerWidth, h = window.innerHeight;
     const off = document.createElement('canvas'); off.width = w; off.height = h;
@@ -175,6 +306,13 @@ function generateNebulaeImage() {
         g.addColorStop(0, `rgba(${n.c},${n.a})`); g.addColorStop(.5, `rgba(${n.c},${n.a * .4})`); g.addColorStop(1, 'rgba(0,0,0,0)');
         ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
     });
+    // Tinte adicional, muy sutil, según la fase activa — refuerza sin competir
+    // con las nebulosas base ni con el trabajo de rendimiento ya hecho.
+    const tint = currentPhaseTint();
+    const tg = ctx.createRadialGradient(w * .5, h * .5, 0, w * .5, h * .5, Math.max(w, h) * .75);
+    tg.addColorStop(0, `rgba(${tint},.05)`);
+    tg.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = tg; ctx.fillRect(0, 0, w, h);
     // distant galaxy spiral
     const gx = w * .82, gy = h * .18, gr = Math.min(w, h) * .12;
     for (let a = 0; a < Math.PI * 6; a += 0.05) {
@@ -507,6 +645,213 @@ function submitPoemResponse(stageIdx, title) {
     });
 }
 
+/* ════════════════ 3.1 — CÁPSULA DEL TIEMPO ════════════════ */
+// Un mensaje que Fabiola escribe y queda sellado hasta una fecha futura.
+//
+// Diseño en DOS documentos (lo exigen las reglas de seguridad de Firestore,
+// que son por-documento: no se puede exponer "está sellada" y ocultar el
+// texto dentro del mismo documento):
+//   - timeCapsule/status  → público (sealed, sealedAt, unlockAt). Nunca
+//     contiene el mensaje, así que es seguro que cualquiera lo lea; es lo
+//     que permite mostrar la cuenta regresiva desde cualquier dispositivo.
+//   - timeCapsule/payload → el mensaje real. Firestore solo permite leerlo
+//     cuando unlockAt ya pasó (ver reglas), así que nadie puede leerlo
+//     antes, ni siquiera abriendo la consola del navegador.
+// Ambos documentos solo admiten "create" (nunca update/delete): una vez
+// sellada, no se puede reescribir ni borrar.
+//
+// 🕰️ Yefferson: cambia esta fecha por la fecha real en la que quieres que
+// se abra la cápsula (por ejemplo, tu próximo aniversario). Formato local
+// 'YYYY-MM-DDTHH:mm:ss'. Se usa al sellar (queda fijada para siempre en
+// Firestore) y como respaldo local para la cuenta regresiva sin red.
+const TIME_CAPSULE_UNLOCK_DATE = '2027-01-01T00:00:00';
+
+const CAPSULE_KEY = 'fabiola_capsule_v1';
+let _capsuleTickInterval = null;
+
+function loadCapsuleLocal() {
+    try { return JSON.parse(localStorage.getItem(CAPSULE_KEY)) || null; } catch (e) { return null; }
+}
+function saveCapsuleLocal(data) {
+    try { localStorage.setItem(CAPSULE_KEY, JSON.stringify(data)); } catch (e) { }
+}
+function capsuleUnlockDate() { return new Date(TIME_CAPSULE_UNLOCK_DATE); }
+// Una vez sellada, la fecha real de apertura es la que quedó fijada en
+// Firestore (state.unlockAt), no la constante — así, aunque después cambies
+// TIME_CAPSULE_UNLOCK_DATE para un futuro uso, esta cápsula ya sellada no se mueve.
+function effectiveUnlockDate(state) {
+    if (state && state.unlockAt) { const d = new Date(state.unlockAt); if (!isNaN(d)) return d; }
+    return capsuleUnlockDate();
+}
+function isUnlockableFor(state) { return Date.now() >= effectiveUnlockDate(state).getTime(); }
+function formatCapsuleDate(d) {
+    try {
+        return new Date(d).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
+    } catch (e) { return ''; }
+}
+
+// Fuente de verdad: Firestore (para que sobreviva a un cambio de celular o
+// caché borrada). Si falla la red, caemos a la copia local para no dejar
+// la pantalla en blanco. IMPORTANTE: nunca guardamos el mensaje en texto
+// plano localmente antes de la fecha de apertura — solo metadatos.
+async function fetchCapsuleState() {
+    const local = loadCapsuleLocal();
+    if (!window._db) return local;
+    try {
+        const statusSnap = await window._db.collection('timeCapsule').doc('status').get();
+        if (!statusSnap.exists) return local;
+        const sd = statusSnap.data();
+        const unlockAt = (sd.unlockAt && sd.unlockAt.toDate ? sd.unlockAt.toDate() : capsuleUnlockDate()).toISOString();
+        const sealedAt = sd.sealedAt && sd.sealedAt.toDate ? sd.sealedAt.toDate().toISOString() : (local && local.sealedAt) || null;
+        const merged = {
+            sealed: true, sealedAt, unlockAt,
+            opened: (local && local.opened) || false,
+            message: (local && local.message) || ''
+        };
+        if (Date.now() >= new Date(unlockAt).getTime()) {
+            try {
+                const payloadSnap = await window._db.collection('timeCapsule').doc('payload').get();
+                if (payloadSnap.exists) merged.message = payloadSnap.data().message || merged.message;
+            } catch (e) {
+                // Antes de unlockAt las reglas niegan esta lectura — es lo esperado, no un error real.
+                console.warn('Payload de la cápsula aún no disponible:', e);
+            }
+        }
+        saveCapsuleLocal(merged);
+        return merged;
+    } catch (e) {
+        console.error('No se pudo consultar la cápsula en Firestore, usando copia local:', e);
+        return local;
+    }
+}
+
+async function renderCapsule() {
+    const wrap = document.getElementById('capsule-wrap');
+    const sub = document.getElementById('capsule-sub');
+    if (!wrap) return;
+    wrap.innerHTML = '<p class="muted-line">Consultando el cosmos…</p>';
+    clearInterval(_capsuleTickInterval);
+
+    const state = await fetchCapsuleState();
+
+    if (!state || !state.sealed) {
+        // ── Estado 1: aún no se ha escrito nada ──
+        sub.textContent = `Este mensaje quedará sellado hasta el ${formatCapsuleDate(capsuleUnlockDate())}.`;
+        wrap.innerHTML = `
+          <div class="capsule-orb unsealed"></div>
+          <div class="poem-response-wrap" style="max-width:520px;margin:0 auto">
+            <p class="poem-response-label">✦ Escribe lo que quieras que tu yo del futuro recuerde</p>
+            <textarea id="capsule-text" class="poem-response-area" placeholder="Querido futuro…" maxlength="1200"></textarea>
+            <div class="poem-response-footer">
+              <span class="poem-char-count" id="capsule-chars">0/1200</span>
+              <button class="btn small poem-submit-btn" onclick="sealCapsule()">SELLAR CÁPSULA ✦</button>
+            </div>
+            <div class="poem-response-status" id="capsule-status"></div>
+          </div>`;
+        const ta = document.getElementById('capsule-text');
+        const cc = document.getElementById('capsule-chars');
+        ta?.addEventListener('input', () => { cc.textContent = `${ta.value.length}/1200`; });
+        return;
+    }
+
+    const unlockFmt = formatCapsuleDate(effectiveUnlockDate(state));
+
+    if (!isUnlockableFor(state)) {
+        // ── Estado 2: sellada, esperando la fecha ──
+        sub.textContent = `Sellada el ${formatCapsuleDate(state.sealedAt || Date.now())}.`;
+        wrap.innerHTML = `
+          <div class="capsule-orb sealed"></div>
+          <div class="capsule-countdown" id="capsule-countdown">—</div>
+          <p class="capsule-hint">Se abrirá sola el ${unlockFmt}. Nadie puede leerla antes, ni siquiera tú — Firestore lo impide aunque alguien abra la consola del navegador.</p>`;
+        const tick = () => {
+            const el = document.getElementById('capsule-countdown');
+            if (!el) { clearInterval(_capsuleTickInterval); return; }
+            if (isUnlockableFor(state)) { renderCapsule(); return; }
+            const ms = effectiveUnlockDate(state).getTime() - Date.now();
+            const days = Math.floor(ms / 86400000);
+            const hours = Math.floor((ms % 86400000) / 3600000);
+            const mins = Math.floor((ms % 3600000) / 60000);
+            el.textContent = `${days}d ${hours}h ${mins}m`;
+        };
+        tick();
+        _capsuleTickInterval = setInterval(tick, 30000);
+        return;
+    }
+
+    if (!state.opened) {
+        // ── Estado 3: la fecha llegó, lista para abrir ──
+        sub.textContent = 'El tiempo se cumplió.';
+        wrap.innerHTML = `
+          <div class="capsule-orb ready"></div>
+          <p class="capsule-hint">Un mensaje de tu pasado está esperando.</p>
+          <button class="btn" onclick="openCapsule()">ABRIR CÁPSULA ✦</button>`;
+        return;
+    }
+
+    // ── Estado 4: ya abierta, muestra el mensaje ──
+    sub.textContent = `Escrito el ${formatCapsuleDate(state.sealedAt || Date.now())}.`;
+    wrap.innerHTML = `
+      <div class="capsule-orb opened"></div>
+      <div class="poem-display">${(state.message || '(no se pudo recuperar el mensaje — revisa tu conexión)').replace(/</g, '&lt;')}</div>`;
+}
+
+async function sealCapsule() {
+    const ta = document.getElementById('capsule-text');
+    const statusEl = document.getElementById('capsule-status');
+    const text = ta?.value?.trim();
+    if (!text) { showToast('✦ Escribe algo antes de sellar la cápsula'); return; }
+    if (!window._db) { showToast('⚠ No hay conexión con el cosmos. Intenta de nuevo con internet.'); return; }
+
+    const unlockDate = capsuleUnlockDate();
+    const ok = confirm(`Esto se sellará hasta el ${formatCapsuleDate(unlockDate)} y no podrás editarlo después. ¿Continuar?`);
+    if (!ok) return;
+
+    const unlockTs = firebase.firestore.Timestamp.fromDate(unlockDate);
+    try {
+        // 1) Documento público primero: si ya existe, las reglas rechazan esto
+        //    como "update" (solo se permite "create") y detectamos que otro
+        //    dispositivo ya la selló, sin arriesgar sobrescribir nada.
+        await window._db.collection('timeCapsule').doc('status').set({
+            sealed: true,
+            sealedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            unlockAt: unlockTs
+        });
+        // 2) El mensaje real, que las reglas ocultan hasta unlockAt.
+        await window._db.collection('timeCapsule').doc('payload').set({
+            message: text,
+            unlockAt: unlockTs
+        });
+    } catch (e) {
+        console.error('Error sellando cápsula:', e);
+        if (e && e.code === 'permission-denied') {
+            showToast('✦ La cápsula ya estaba sellada desde otro dispositivo.');
+            renderCapsule();
+            return;
+        }
+        if (statusEl) statusEl.textContent = '⚠ No se pudo sellar. Revisa tu conexión e intenta de nuevo.';
+        return;
+    }
+
+    saveCapsuleLocal({ sealed: true, sealedAt: new Date().toISOString(), unlockAt: unlockDate.toISOString(), opened: false, message: '' });
+    if (save) unlockAchievement('capsule');
+    showToast('✦ Cápsula sellada. El tiempo hará el resto.');
+    renderCapsule();
+}
+
+async function openCapsule() {
+    let local = loadCapsuleLocal() || {};
+    if (!local.message) {
+        const fresh = await fetchCapsuleState();
+        if (fresh) local = fresh;
+    }
+    local.opened = true;
+    saveCapsuleLocal(local);
+    if (save) unlockAchievement('capsuleOpen');
+    supernovaBurst();
+    sfxSuccess?.();
+    renderCapsule();
+}
+
 /* ════════════════ NEBULA DRIFT — TRANSICIÓN CÓSMICA ENTRE POEMAS ════════════════ */
 let confTransitioning = false;
 
@@ -686,6 +1031,7 @@ function showScreen(id, after) {
         document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
         const t = document.getElementById(id);
         if (t) { t.classList.add('active'); currentScreen = id; window.scrollTo({ top: 0, behavior: 'instant' in window ? 'instant' : 'auto' }); }
+        if (id !== 'capsule-screen') clearInterval(_capsuleTickInterval);
         const inGame = ['phase1-screen', 'phase2-screen', 'phase3-screen', 'map-screen'].includes(id);
         showTopbar(id !== 'menu-screen');
         document.getElementById('hud-progress').style.display = inGame ? 'flex' : 'none';
@@ -694,9 +1040,34 @@ function showScreen(id, after) {
         if (after) after();
     };
     if (cur && !settings.reducedMotion) {
+        playWarpTransition();
         cur.style.animation = 'fadeSlideOut .35s ease-in forwards';
         setTimeout(() => { cur.style.animation = ''; go(); }, 330);
     } else { if (cur) cur.style.animation = ''; go(); }
+}
+/* ════════════════ TRANSICIÓN "VIAJE POR EL ESPACIO" (Opción A) ════════════════ */
+// Breve destello de estrellas-estirándose entre pantallas, en vez de un fade
+// genérico. Se omite en movimiento reducido o calidad baja.
+function playWarpTransition() {
+    if (settings.reducedMotion || QUALITY === 'low') return;
+    const ov = document.getElementById('warp-overlay');
+    if (!ov) return;
+    ov.classList.remove('active');
+    ov.innerHTML = '';
+    void ov.offsetWidth; // reinicia la animación si se dispara seguido
+    const n = QUALITY === 'high' ? 10 : 6;
+    for (let i = 0; i < n; i++) {
+        const s = document.createElement('div');
+        s.className = 'warp-streak';
+        const w = 20 + Math.random() * 55;
+        s.style.top = (Math.random() * 100) + 'vh';
+        s.style.left = (Math.random() * (100 - w)) + 'vw';
+        s.style.width = w + 'vw';
+        s.style.animationDelay = (Math.random() * 0.15) + 's';
+        ov.appendChild(s);
+    }
+    ov.classList.add('active');
+    setTimeout(() => ov.classList.remove('active'), 650);
 }
 function simulateLoading(targetScreen, setup, message) {
     const loader = document.getElementById('loading-screen');
@@ -721,6 +1092,16 @@ const MAP_NODES = [
     { id: 'p4', x: 28, y: 74, label: 'IV · ✦ Próximamente', sub: 'Bloqueada' },
     { id: 'p5', x: 60, y: 92, label: 'V · ✦ Próximamente', sub: 'Bloqueada' },
 ];
+// 💫 Yefferson: agrega aquí los hitos reales de su historia (fechas que ya
+//    vivieron juntos). No hace falta x/y: se acomodan solos, en orden
+//    cronológico, como una constelación secundaria junto al camino principal.
+//    'note' es opcional y aparece al tocar el hito.
+const MEMORY_MILESTONES = [
+    { date: '2023-02-14', title: 'Primer "te quiero"', note: 'Edítame con un recuerdo real en MEMORY_MILESTONES ✦' },
+    { date: '2023-08-20', title: 'Primer viaje juntos', note: 'Edítame con un recuerdo real en MEMORY_MILESTONES ✦' },
+    { date: '2024-12-24', title: 'Una noche especial', note: 'Edítame con un recuerdo real en MEMORY_MILESTONES ✦' },
+];
+
 function isUnlocked(id) {
     // 🔒 Fases extra: cámbialo cuando agregues su lógica
     if (id === 'p4' || id === 'p5') return false;
@@ -852,6 +1233,52 @@ function buildMap() {
     bh.style.left = '90%'; bh.style.top = '5%';
     bh.title = 'Agujero negro - singularidad cósmica';
     wrap.appendChild(bh);
+
+    buildMemoryTimeline(wrap, svg, W, H);
+}
+
+/* ════════════════ 3.2 — MAPA COMO LÍNEA DE TIEMPO REAL ════════════════ */
+// Dibuja los hitos reales (MEMORY_MILESTONES) como una constelación
+// secundaria discreta en el borde derecho del mapa, ordenados por fecha,
+// sin interferir con el camino jugable p1→p5.
+function buildMemoryTimeline(wrap, svg, W, H) {
+    if (!MEMORY_MILESTONES || !MEMORY_MILESTONES.length) return;
+    const sorted = [...MEMORY_MILESTONES].sort((a, b) => new Date(a.date) - new Date(b.date));
+    const colX = 88; // % — columna discreta cerca del borde derecho
+    const topY = 10, bottomY = 90;
+    const step = sorted.length > 1 ? (bottomY - topY) / (sorted.length - 1) : 0;
+    const points = sorted.map((m, i) => ({
+        ...m,
+        x: colX,
+        y: sorted.length > 1 ? topY + step * i : (topY + bottomY) / 2
+    }));
+
+    // Línea fina que conecta los recuerdos entre sí (constelación secundaria)
+    for (let i = 0; i < points.length - 1; i++) {
+        const a = points[i], b = points[i + 1];
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line.setAttribute('x1', a.x * W / 100); line.setAttribute('y1', a.y * H / 100);
+        line.setAttribute('x2', b.x * W / 100); line.setAttribute('y2', b.y * H / 100);
+        line.setAttribute('stroke', 'rgba(212,160,176,.35)');
+        line.setAttribute('stroke-width', '1');
+        line.setAttribute('stroke-dasharray', '2 5');
+        svg.appendChild(line);
+    }
+
+    points.forEach(m => {
+        const node = document.createElement('div');
+        node.className = 'map-memory-node';
+        node.style.left = m.x + '%';
+        node.style.top = m.y + '%';
+        const dateFmt = formatCapsuleDate ? formatCapsuleDate(m.date) : m.date;
+        node.innerHTML = `<div class="map-memory-star">✦</div>
+      <div class="lbl">${m.title}</div><div class="sub">${dateFmt}</div>`;
+        node.addEventListener('click', () => {
+            sfxClick?.();
+            showToast(`${dateFmt} · ${m.title}${m.note ? ' — ' + m.note : ''}`, 4200);
+        });
+        wrap.appendChild(node);
+    });
 }
 
 function enterPhase(p) {
@@ -1681,7 +2108,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const scrollable = sh > ih + 60;
         const nearBottom = sy + ih >= sh - 40;
         // Solo lo mostramos en pantallas de juego/galería/mapa, no en menú
-        const okScreen = ['phase1-screen', 'phase2-screen', 'phase3-screen', 'map-screen', 'gallery-screen', 'progress-screen', 'settings-screen', 'credits-screen'].includes(currentScreen);
+        const okScreen = ['phase1-screen', 'phase2-screen', 'phase3-screen', 'map-screen', 'gallery-screen', 'progress-screen', 'settings-screen', 'credits-screen', 'capsule-screen'].includes(currentScreen);
         el.classList.toggle('visible', okScreen && scrollable && !nearBottom);
     }
     // Throttle para no saturar móviles
@@ -2836,7 +3263,14 @@ function playTrack(index) {
     /* ---------- 7. FPS watchdog ---------- */
     (function fpsWatch() {
         var frames = 0, t0 = performance.now(), bad = 0;
-        window.__fpsTick = function () { frames++; };
+        // FIX: no pisar el __fpsTick ya definido más arriba (auto-downgrade
+        // gradual alta→media→baja); encadenamos ambos para que los dos
+        // sistemas de vigilancia de FPS sigan funcionando.
+        var _prevFpsTick = window.__fpsTick;
+        window.__fpsTick = function (ts) {
+            if (typeof _prevFpsTick === 'function') _prevFpsTick(ts);
+            frames++;
+        };
         setInterval(function () {
             var now = performance.now();
             var fps = (frames * 1000) / (now - t0);

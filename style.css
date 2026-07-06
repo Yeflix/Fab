@@ -955,6 +955,7 @@ body::before {
     font-size: .72rem;
     cursor: pointer;
     margin-top: .3rem;
+    padding: .35rem .2rem;
     text-decoration: underline;
     letter-spacing: .06em;
     font-family: var(--font-main)
@@ -1525,6 +1526,42 @@ body::before {
     opacity: 1
 }
 
+/* 2.2 — Botón discreto para reintentar la pantalla actual tras un error */
+.retry-screen-btn {
+    position: fixed;
+    bottom: 22px;
+    left: 50%;
+    transform: translateX(-50%) translateY(12px);
+    background: rgba(15, 15, 35, .95);
+    border: 1.5px solid var(--gold-soft);
+    color: var(--gold);
+    padding: .55rem 1.3rem;
+    border-radius: 20px;
+    z-index: 121;
+    font-size: .78rem;
+    letter-spacing: .06em;
+    font-family: var(--font-main);
+    cursor: pointer;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .3s, transform .3s;
+    backdrop-filter: blur(8px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, .5)
+}
+
+.retry-screen-btn.show {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateX(-50%) translateY(0)
+}
+
+.retry-screen-btn:hover,
+.retry-screen-btn:focus-visible {
+    border-color: var(--gold-bright);
+    color: var(--gold-bright);
+    outline: none
+}
+
 .ach-pop {
     position: fixed;
     top: 70px;
@@ -2069,6 +2106,7 @@ body::before {
         width: 38px;
         height: 38px;
         min-width: 38px;
+        min-height: 38px;
         font-size: .95rem;
         border-radius: 9px
     }
@@ -2368,9 +2406,14 @@ body::before {
     }
 
     .icon-btn {
-        width: 28px;
-        height: 28px;
-        font-size: .78rem
+        /* FIX: 28px quedaba por debajo del mínimo táctil recomendado (~36-44px)
+           y además un min-width:38px heredado de un breakpoint anterior lo
+           dejaba no-cuadrado (38×28). Ahora fijamos width/height/min-* juntos. */
+        width: 36px;
+        height: 36px;
+        min-width: 36px;
+        min-height: 36px;
+        font-size: .82rem
     }
 
     .hud-progress {
@@ -3177,8 +3220,12 @@ body::before {
     position: absolute;
     top: .4rem;
     right: .4rem;
-    width: 28px;
-    height: 28px;
+    /* FIX: mismo problema que .icon-btn — 28px queda por debajo del mínimo
+       táctil recomendado, especialmente sobre miniaturas de 96px en móvil. */
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    min-height: 32px;
     border-radius: 50%;
     background: rgba(0, 0, 0, .65);
     color: #fff;
@@ -3587,6 +3634,8 @@ body {
     .icon-btn {
         width: 38px;
         height: 38px;
+        min-width: 38px;
+        min-height: 38px;
         font-size: 1rem;
     }
 
@@ -3698,8 +3747,12 @@ body {
     }
 
     .icon-btn {
-        width: 34px;
-        height: 34px;
+        /* FIX: coincide con el otro breakpoint ≤360px para evitar un botón
+           no-cuadrado (esta regla es la última en cascada a este ancho). */
+        width: 36px;
+        height: 36px;
+        min-width: 36px;
+        min-height: 36px;
     }
 
     .menu-btn {
@@ -3957,4 +4010,324 @@ img {
     letter-spacing: .08em;
     padding: .75rem 1.6rem;
     animation: pulseStar 2.4s ease-in-out infinite;
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   OPCIÓN A — "CONSTELACIÓN VIVA"
+   El UI se dibuja como parte del mapa estelar: nodos que se encienden,
+   esquinas tipo constelación en vez de bordes genéricos, y un HUD con
+   más carácter. Todo respeta prefers-reduced-motion / .reduced-motion.
+   ════════════════════════════════════════════════════════════════════ */
+
+/* --- 1. Botones como nodos: punto + línea que se enciende al enfocar --- */
+.btn { position: relative; }
+.btn::before {
+    content: '';
+    position: absolute;
+    left: 14px; top: 50%;
+    width: 5px; height: 5px;
+    margin-top: -2.5px;
+    border-radius: 50%;
+    background: var(--gold-soft);
+    opacity: .5;
+    transition: background .3s ease, box-shadow .3s ease, opacity .3s ease;
+    pointer-events: none;
+}
+.btn::after {
+    content: '';
+    position: absolute;
+    left: 21px; top: 50%;
+    width: 0; height: 1px;
+    margin-top: -.5px;
+    background: linear-gradient(90deg, var(--gold-bright), transparent);
+    transition: width .45s cubic-bezier(.2,.8,.2,1);
+    pointer-events: none;
+}
+.btn:hover::before, .btn:focus-visible::before {
+    background: var(--gold-bright);
+    box-shadow: 0 0 7px 2px rgba(212,165,116,.65);
+    opacity: 1;
+}
+.btn:hover::after, .btn:focus-visible::after { width: 26px; }
+.btn.locked::before, .btn.locked::after { display: none; }
+.btn.small::before { left: 10px; }
+.btn.small::after  { left: 16px; }
+.btn.ghost::before { background: var(--accent); }
+.btn.ghost:hover::before, .btn.ghost:focus-visible::before {
+    background: var(--accent);
+    box-shadow: 0 0 7px 2px rgba(139,180,208,.6);
+}
+.btn.ghost:hover::after, .btn.ghost:focus-visible::after {
+    background: linear-gradient(90deg, var(--accent), transparent);
+}
+
+/* Icon buttons (⚙, ✕...): en vez de nodo+línea, un anillo que se enciende */
+.icon-btn { position: relative; }
+.icon-btn::after {
+    content: '';
+    position: absolute;
+    inset: -4px;
+    border-radius: 12px;
+    border: 1px solid transparent;
+    transition: border-color .3s, box-shadow .3s;
+    pointer-events: none;
+}
+.icon-btn:hover::after, .icon-btn:focus-visible::after {
+    border-color: rgba(212,165,116,.55);
+    box-shadow: 0 0 10px 1px rgba(212,165,116,.35);
+}
+
+/* --- 2. Tarjetas con esquinas tipo constelación (punto + trazo) --- */
+.panel { position: relative; }
+.panel::before, .panel::after {
+    content: '';
+    position: absolute;
+    width: 22px; height: 22px;
+    opacity: .55;
+    pointer-events: none;
+    transition: opacity .35s ease, border-color .35s ease;
+}
+.panel::before {
+    top: 0; left: 0;
+    border-top: 1.5px solid var(--gold-soft);
+    border-left: 1.5px solid var(--gold-soft);
+    background: radial-gradient(circle 2px at 0 0, var(--gold-bright) 100%, transparent 100%);
+}
+.panel::after {
+    bottom: 0; right: 0;
+    border-bottom: 1.5px solid var(--gold-soft);
+    border-right: 1.5px solid var(--gold-soft);
+    background: radial-gradient(circle 2px at 100% 100%, var(--gold-bright) 100%, transparent 100%);
+}
+.panel:hover::before, .panel:hover::after {
+    opacity: .9;
+    border-color: var(--gold-bright);
+}
+/* El gate-card ya tiene su propio halo giratorio (::before); le damos
+   solo la esquina inferior como acento discreto para no competir con él. */
+.gate-card::after {
+    content: '';
+    position: absolute;
+    bottom: 6px; right: 6px;
+    width: 20px; height: 20px;
+    border-bottom: 1.5px solid rgba(212,160,176,.6);
+    border-right: 1.5px solid rgba(212,160,176,.6);
+    background: radial-gradient(circle 2px at 100% 100%, #f0d0e0 100%, transparent 100%);
+    opacity: .7;
+    pointer-events: none;
+}
+@media (max-width: 480px) {
+    .panel::before, .panel::after { width: 16px; height: 16px; }
+}
+
+/* --- 3. Transición "viaje por el espacio" entre pantallas --- */
+/* Un breve destello de estrellas-estirándose sobre el propio fondo canvas,
+   en vez de un fade genérico. Se omite si el usuario pidió movimiento reducido. */
+#warp-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 90;
+    pointer-events: none;
+    opacity: 0;
+}
+#warp-overlay.active {
+    animation: warpFlash .6s ease-out;
+}
+@keyframes warpFlash {
+    0%   { opacity: 0; backdrop-filter: blur(0px); }
+    35%  { opacity: 1; backdrop-filter: blur(1px); }
+    100% { opacity: 0; backdrop-filter: blur(0px); }
+}
+.warp-streak {
+    position: absolute;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--gold-bright), transparent);
+    transform-origin: center;
+    animation: warpStreak .6s ease-out forwards;
+}
+@keyframes warpStreak {
+    0%   { opacity: 0; transform: scaleX(0); }
+    30%  { opacity: .9; }
+    100% { opacity: 0; transform: scaleX(1); }
+}
+
+/* --- 4. HUD con más carácter: separadores tipo constelación --- */
+.hud-progress { position: relative; }
+.hud-progress::before {
+    content: '✦';
+    color: var(--gold-soft);
+    font-size: .7rem;
+    margin-right: -.1rem;
+    opacity: .7;
+}
+.hud-stars::before {
+    content: '';
+    display: inline-block;
+    width: 3px; height: 3px;
+    border-radius: 50%;
+    background: var(--gold-bright);
+    margin-right: 6px;
+    vertical-align: middle;
+    box-shadow: 0 0 4px 1px rgba(212,165,116,.7);
+}
+
+/* --- 5. Nebulosas con tinte por fase (ver generateNebulaeImage en script.js) --- */
+/* El propio canvas ya lee --phase1/2/3 vía JS; aquí solo dejamos la transición
+   del halo del topbar/HUD coherente con el tinte activo. */
+body[data-phase="1"] .hud-progress { box-shadow: 0 0 0 1px rgba(139,180,208,.12) inset; }
+body[data-phase="2"] .hud-progress { box-shadow: 0 0 0 1px rgba(212,184,138,.12) inset; }
+body[data-phase="3"] .hud-progress { box-shadow: 0 0 0 1px rgba(212,160,176,.12) inset; }
+
+/* --- Línea de constelación conectando los botones del menú principal --- */
+.menu-stack { position: relative; }
+.menu-stack-svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 0;
+    overflow: visible;
+}
+.menu-stack .btn { position: relative; z-index: 1; }
+.msl-line {
+    stroke: rgba(212,165,116,.16);
+    stroke-width: 1;
+    stroke-dasharray: 3 5;
+    transition: stroke .4s ease, stroke-dasharray .4s ease;
+}
+.msl-line.lit { stroke: rgba(212,165,116,.6); stroke-dasharray: none; }
+.msl-dot {
+    fill: rgba(212,165,116,.35);
+    transition: fill .3s ease, filter .3s ease;
+}
+.msl-dot.lit {
+    fill: var(--gold-bright);
+    filter: drop-shadow(0 0 5px rgba(212,165,116,.8));
+}
+@media (prefers-reduced-motion: reduce) {
+    #warp-overlay, .warp-streak { display: none !important; animation: none !important; }
+}
+
+/* ══════════════ 3.1 — CÁPSULA DEL TIEMPO ══════════════ */
+.capsule-wrap {
+    max-width: 560px;
+    margin: 0 auto;
+    text-align: center;
+}
+.capsule-orb {
+    width: 90px;
+    height: 90px;
+    margin: 0 auto 1.2rem;
+    border-radius: 50%;
+    position: relative;
+}
+.capsule-orb.unsealed {
+    background: radial-gradient(circle at 35% 30%, #fff 5%, var(--gold-bright) 25%, var(--gold-soft) 60%, #2a2214 90%, transparent);
+    box-shadow: 0 0 40px rgba(240, 200, 150, .45);
+    animation: cosmicPulse 3.4s ease-in-out infinite;
+}
+.capsule-orb.sealed {
+    background: radial-gradient(circle at 35% 30%, #556 5%, #334 30%, #1a1a2a 70%, transparent);
+    box-shadow: 0 0 24px rgba(120, 130, 180, .3), inset 0 0 18px rgba(0, 0, 0, .6);
+    animation: cosmicPulse 5s ease-in-out infinite;
+}
+.capsule-orb.ready {
+    background: radial-gradient(circle at 35% 30%, #fff 5%, var(--gold-bright) 25%, var(--accent2) 65%, #4a1e3a 90%, transparent);
+    box-shadow: 0 0 55px rgba(240, 200, 150, .65), 0 0 90px rgba(212, 160, 176, .55);
+    animation: cosmicPulse 1.6s ease-in-out infinite;
+}
+.capsule-orb.opened {
+    background: radial-gradient(circle at 35% 30%, #fff 5%, var(--success) 40%, #2a4a34 90%, transparent);
+    box-shadow: 0 0 30px rgba(122, 174, 138, .45);
+}
+.capsule-countdown {
+    font-family: var(--font-mono);
+    font-size: 1.6rem;
+    letter-spacing: .1em;
+    color: var(--gold-bright);
+    margin: .6rem 0;
+    text-shadow: 0 0 16px rgba(212, 165, 116, .5);
+}
+.capsule-hint {
+    font-size: .82rem;
+    color: var(--text-soft);
+    font-style: italic;
+    line-height: 1.6;
+    max-width: 420px;
+    margin: 0 auto;
+}
+
+/* ══════════════ 3.2 — HITOS REALES EN EL MAPA ══════════════ */
+.map-memory-node {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    pointer-events: auto;
+    z-index: 4;
+    transition: transform .3s;
+}
+.map-memory-node:hover { transform: translate(-50%, -50%) scale(1.12); }
+.map-memory-star {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: radial-gradient(circle at 35% 30%, #fff, var(--accent2) 55%, #4a1e3a 100%);
+    box-shadow: 0 0 14px rgba(212, 160, 176, .6);
+    color: #2a0f1f;
+    font-size: .7rem;
+}
+.map-memory-node .lbl {
+    margin-top: .3rem;
+    font-size: .6rem;
+    color: var(--accent2);
+    letter-spacing: .06em;
+    text-shadow: 0 0 8px rgba(0, 0, 0, .8);
+    white-space: nowrap;
+    max-width: 90px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.map-memory-node .sub {
+    font-size: .55rem;
+    color: var(--text-soft);
+    margin-top: .1rem;
+}
+@media (max-width: 480px) {
+    .map-memory-node .lbl { max-width: 60px; font-size: .55rem; }
+    .map-memory-star { width: 18px; height: 18px; }
+}
+
+/* ══════════════ CÁPSULA DEL TIEMPO — ajuste fino en pantallas chicas ══════════════
+   (la pantalla es nueva y no había recibido el mismo pulido de tamaños que
+   el resto de pantallas del proyecto en los breakpoints ≤480px/≤360px) */
+@media (max-width: 480px) {
+    .capsule-orb {
+        width: 76px;
+        height: 76px;
+        margin-bottom: 1rem;
+    }
+    .capsule-countdown {
+        font-size: 1.3rem;
+    }
+    .capsule-hint {
+        font-size: .78rem;
+        max-width: 100%;
+    }
+}
+@media (max-width: 360px) {
+    .capsule-orb {
+        width: 64px;
+        height: 64px;
+    }
+    .capsule-countdown {
+        font-size: 1.1rem;
+        letter-spacing: .06em;
+    }
 }

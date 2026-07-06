@@ -1,0 +1,73 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // poemResponses: Fabiola escribe una única vez por etapa (poem_0, poem_1, ...).
+    // - allow create (no update/delete): una vez enviada una respuesta, nadie
+    //   puede pisarla ni borrarla, aunque adivine el ID del documento.
+    // - Validación de esquema: solo se aceptan exactamente estos 3 campos,
+    //   con tipos y tamaños razonables, y timestamp debe ser el del servidor.
+    match /poemResponses/{doc} {
+      allow create: if
+        request.resource.data.keys().hasOnly(['poemTitle', 'response', 'timestamp']) &&
+        request.resource.data.poemTitle is string &&
+        request.resource.data.poemTitle.size() > 0 &&
+        request.resource.data.poemTitle.size() < 200 &&
+        request.resource.data.response is string &&
+        request.resource.data.response.size() > 0 &&
+        request.resource.data.response.size() < 5000 &&
+        request.resource.data.timestamp == request.time;
+      allow update, delete: if false;
+      // Solo lectura autenticada (hoy la app no usa Firebase Auth, así que en la
+      // práctica solo se lee desde la consola de Firebase con permisos de admin,
+      // lo cual está bien: nadie desde el navegador puede leer respuestas ajenas).
+      allow read: if request.auth != null;
+    }
+
+    // timeCapsule: mensaje que Fabiola escribe una única vez y que queda
+    // sellado hasta una fecha futura (unlockAt). Se divide en dos documentos
+    // porque las reglas de Firestore son por-documento completo: no se puede
+    // exponer "está sellada" y ocultar el texto dentro del mismo documento.
+    //
+    //   status  → metadatos públicos, NUNCA contiene el mensaje. Lectura
+    //             abierta para que cualquier dispositivo pueda mostrar la
+    //             cuenta regresiva sin necesitar autenticación.
+    //   payload → el mensaje real. Solo se puede leer cuando el propio
+    //             documento indica que unlockAt ya pasó (comparación server-
+    //             side: nadie puede leerlo antes ni manipulando el navegador).
+    //
+    // Ambos: solo "create", nunca update/delete — sellada es sellada.
+    match /timeCapsule/status {
+      allow read: if true;
+      allow create: if
+        request.resource.data.keys().hasOnly(['sealed', 'sealedAt', 'unlockAt']) &&
+        request.resource.data.sealed == true &&
+        request.resource.data.sealedAt == request.time &&
+        request.resource.data.unlockAt is timestamp &&
+        request.resource.data.unlockAt > request.time;
+      allow update, delete: if false;
+    }
+    match /timeCapsule/payload {
+      // Antes de unlockAt, "resource" (el documento ya existente) hace que
+      // esta condición sea falsa y Firestore niega la lectura por completo.
+      allow read: if resource.data.unlockAt <= request.time;
+      allow create: if
+        request.resource.data.keys().hasOnly(['message', 'unlockAt']) &&
+        request.resource.data.message is string &&
+        request.resource.data.message.size() > 0 &&
+        request.resource.data.message.size() < 5000 &&
+        request.resource.data.unlockAt is timestamp &&
+        // Debe coincidir con la fecha ya fijada en /timeCapsule/status, para
+        // que nadie pueda crear un payload "suelto" con otra fecha.
+        request.resource.data.unlockAt == get(/databases/$(database)/documents/timeCapsule/status).data.unlockAt;
+      allow update, delete: if false;
+    }
+
+    // Cualquier otra colección queda denegada por defecto (comportamiento normal
+    // de Firestore cuando no hay una regla que haga match), pero lo dejamos
+    // explícito para que quede claro y no se agregue algo nuevo sin querer.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

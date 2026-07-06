@@ -19,6 +19,7 @@
       matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     /* (1) Atmósfera dinámica · marca data-phase en <body> */
+    let _lastTintPhase = null;
     function syncPhaseAttr() {
       try {
         const p = (typeof save !== 'undefined' && save) ? Math.min(save.phase || 1, 3) : 1;
@@ -27,6 +28,12 @@
         const q = (typeof QUALITY !== 'undefined') ? QUALITY :
           (typeof settings !== 'undefined' ? settings.quality : 'auto');
         document.body.setAttribute('data-quality', q || 'auto');
+        // Opción A, pieza 5: si cambió la fase, invalida la caché de la
+        // nebulosa para que se regenere con el nuevo tinte en el próximo frame.
+        if (_lastTintPhase !== null && _lastTintPhase !== p && typeof nebulaeImage !== 'undefined') {
+          nebulaeImage = null;
+        }
+        _lastTintPhase = p;
       } catch (e) { }
     }
     syncPhaseAttr();
@@ -220,35 +227,24 @@
       if (!map || !map.classList.contains('active')) return;
       const wrap = map.querySelector('.map-canvas, .map-wrap, .map-grid, .stellar-map') || map;
       const nodes = wrap.querySelectorAll('.map-node, .star-node, [data-map-node]');
-      if (!nodes.length || wrap.querySelector('.map-link-svg')) return;
+      if (!nodes.length) return;
       if (getComputedStyle(wrap).position === 'static') wrap.style.position = 'relative';
       const wrapRect = wrap.getBoundingClientRect();
-      const svgNS = 'http://www.w3.org/2000/svg';
-      const svg = document.createElementNS(svgNS, 'svg');
-      svg.setAttribute('class', 'map-link-svg');
-      svg.setAttribute('viewBox', `0 0 ${wrapRect.width} ${wrapRect.height}`);
-      svg.setAttribute('preserveAspectRatio', 'none');
-      const pts = [];
-      nodes.forEach((n) => {
-        const r = n.getBoundingClientRect();
-        pts.push({
-          x: r.left - wrapRect.left + r.width / 2,
-          y: r.top - wrapRect.top + r.height / 2,
-          done: n.classList.contains('done') || n.classList.contains('completed') || n.classList.contains('unlocked'),
-          el: n
-        });
-      });
-      for (let i = 0; i < pts.length - 1; i++) {
-        const line = document.createElementNS(svgNS, 'line');
-        line.setAttribute('x1', pts[i].x); line.setAttribute('y1', pts[i].y);
-        line.setAttribute('x2', pts[i + 1].x); line.setAttribute('y2', pts[i + 1].y);
-        if (pts[i].done) line.classList.add('lit');
-        svg.appendChild(line);
-      }
-      wrap.insertBefore(svg, wrap.firstChild);
+      // FIX: ya no se dibuja aquí una segunda capa de líneas conectoras —
+      // buildMap() (script.js) ya dibuja esas mismas conexiones en #map-svg
+      // con el estado real de cada fase (completada/bloqueada) y su propia
+      // animación. Duplicarlas aquí solo producía trazos redundantes
+      // superpuestos. Conservamos el hover-preview, que sí es aditivo.
 
       // hover preview
+      // FIX: decorateMap() puede re-ejecutarse varias veces sobre los mismos
+      // nodos (el MutationObserver de abajo dispara en cualquier cambio de
+      // clase dentro de #app, no solo al reconstruir el mapa). Sin esta
+      // marca, cada pasada sumaba un par nuevo de listeners mouseenter/
+      // mouseleave al mismo nodo en vez de reutilizar los ya puestos.
       nodes.forEach((n) => {
+        if (n.dataset.hoverBound) return;
+        n.dataset.hoverBound = '1';
         n.addEventListener('mouseenter', () => {
           const title = n.getAttribute('data-title') || n.querySelector('.map-title, h3, h2')?.textContent || 'Fase';
           const meta = n.getAttribute('data-meta') ||
@@ -272,6 +268,64 @@
     }
     new MutationObserver(() => { if ($('#map-screen')?.classList.contains('active')) setTimeout(decorateMap, 100); })
       .observe(screensRoot, { subtree: true, attributes: true, attributeFilter: ['class'] });
+
+    /* (4b) Opción A — constelación viva: línea que conecta los botones del menú */
+    function decorateMenuStack() {
+      const stack = $('.menu-stack');
+      if (!stack) return;
+      let svg = stack.querySelector('.menu-stack-svg');
+      const btns = Array.from(stack.querySelectorAll('.btn')).filter(b => b.offsetParent !== null);
+      if (btns.length < 2) { if (svg) svg.innerHTML = ''; return; }
+      if (!svg) {
+        svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.setAttribute('class', 'menu-stack-svg');
+        stack.insertBefore(svg, stack.firstChild);
+      }
+      const svgNS = 'http://www.w3.org/2000/svg';
+      const rect = stack.getBoundingClientRect();
+      svg.setAttribute('viewBox', `0 0 ${rect.width} ${rect.height}`);
+      svg.innerHTML = '';
+      const pts = btns.map(b => {
+        const r = b.getBoundingClientRect();
+        return { x: rect.width / 2, y: r.top - rect.top + r.height / 2, btn: b };
+      });
+      for (let i = 0; i < pts.length - 1; i++) {
+        const line = document.createElementNS(svgNS, 'line');
+        line.setAttribute('x1', pts[i].x); line.setAttribute('y1', pts[i].y);
+        line.setAttribute('x2', pts[i + 1].x); line.setAttribute('y2', pts[i + 1].y);
+        line.setAttribute('class', 'msl-line');
+        svg.appendChild(line);
+        pts[i]._lineDown = line; pts[i + 1]._lineUp = line;
+      }
+      pts.forEach(p => {
+        const dot = document.createElementNS(svgNS, 'circle');
+        dot.setAttribute('cx', p.x); dot.setAttribute('cy', p.y); dot.setAttribute('r', 3);
+        dot.setAttribute('class', 'msl-dot');
+        svg.appendChild(dot);
+        if (p.btn._mslBound) return; // evita listeners duplicados si se vuelve a decorar
+        p.btn._mslBound = true;
+        const on = () => {
+          dot.classList.add('lit');
+          p._lineUp && p._lineUp.classList.add('lit');
+          p._lineDown && p._lineDown.classList.add('lit');
+        };
+        const off = () => {
+          dot.classList.remove('lit');
+          p._lineUp && p._lineUp.classList.remove('lit');
+          p._lineDown && p._lineDown.classList.remove('lit');
+        };
+        p.btn.addEventListener('mouseenter', on);
+        p.btn.addEventListener('focus', on);
+        p.btn.addEventListener('mouseleave', off);
+        p.btn.addEventListener('blur', off);
+      });
+    }
+    let _menuDecorT;
+    function scheduleDecorateMenuStack() { clearTimeout(_menuDecorT); _menuDecorT = setTimeout(decorateMenuStack, 60); }
+    new MutationObserver(() => { if ($('#menu-screen')?.classList.contains('active')) scheduleDecorateMenuStack(); })
+      .observe(screensRoot, { subtree: true, attributes: true, attributeFilter: ['class', 'style'] });
+    window.addEventListener('resize', () => { if ($('#menu-screen')?.classList.contains('active')) scheduleDecorateMenuStack(); }, { passive: true });
+    scheduleDecorateMenuStack();
 
     /* (6) Adaptive quality real · si FPS bajo, forzar low */
     let last = performance.now(), frames = 0, low = 0;

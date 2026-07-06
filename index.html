@@ -91,9 +91,10 @@
       <button class="btn p3p-btn" id="p3p-continue">✦ Cruzar el umbral</button>
     </div>
   </div>
-  </div>
 
   <div class="toast" id="toast"></div>
+  <button id="retry-screen-btn" class="retry-screen-btn" onclick="retryCurrentScreen()">↻ Reintentar esta pantalla</button>
+  <div id="warp-overlay" aria-hidden="true"></div>
   <div class="ach-pop" id="ach-pop">
     <div class="ico">🏆</div>
     <div>
@@ -292,7 +293,14 @@
           <h3>Galería de Fotos</h3>
           <p>Sube imágenes, añade descripciones y revive momentos. Todo guardado en tu dispositivo.</p>
         </div>
+        <div class="hub-card" onclick="showScreen('capsule-screen', renderCapsule)">
+          <span class="pill">Sellada</span>
+          <span class="ico">🕰</span>
+          <h3>Cápsula del Tiempo</h3>
+          <p>Escribe un mensaje que quedará sellado hasta una fecha futura. Solo el tiempo puede abrirlo.</p>
+        </div>
       </div>
+      
       <button class="btn small ghost" style="margin-top:1.4rem" onclick="showScreen('menu-screen')">← VOLVER AL
         MENÚ</button>
     </div>
@@ -416,6 +424,17 @@
       <button class="btn small ghost" style="margin-top:1rem" onclick="showScreen('extras-screen')">← VOLVER</button>
     </div>
 
+    <!-- TIME CAPSULE (3.1) -->
+    <div class="screen" id="capsule-screen">
+      <div class="constellation-hint">✧ CÁPSULA DEL TIEMPO ✧</div>
+      <h2 class="map-title" style="margin-bottom:.3rem">Un mensaje para el futuro</h2>
+      <p class="map-sub" id="capsule-sub">Escribe algo que solo tu yo del futuro podrá leer.</p>
+      <div class="capsule-wrap" id="capsule-wrap">
+        <!-- contenido inyectado por renderCapsule() en script.js -->
+      </div>
+      <button class="btn small ghost" style="margin-top:1.4rem" onclick="showScreen('extras-screen')">← VOLVER</button>
+    </div>
+
     <!-- CONSTELLATION MAP (HUB / LEVEL SELECT) -->
     <div class="screen" id="map-screen">
       <div class="constellation-hint">✧ MAPA ESTELAR ✧</div>
@@ -431,6 +450,7 @@
         <span><span class="dot" style="background:radial-gradient(circle,#fff,var(--success))"></span> Completada</span>
         <span><span class="dot" style="background:#3a3a4e"></span> Bloqueada</span>
         <span><span class="dot" style="background:radial-gradient(circle,#000 50%,#a060e0)"></span> Singularidad</span>
+        <span><span class="dot" style="background:radial-gradient(circle,#fff,var(--accent2))"></span> Recuerdo real</span>
       </div>
       <button class="btn small ghost" style="margin-top:1.4rem" onclick="goHome()">← VOLVER AL MENÚ</button>
     </div>
@@ -495,6 +515,15 @@
                 style="font-family:var(--font-mono);color:var(--gold-bright);font-size:.75rem;min-width:38px;text-align:right">60%</span>
             </div>
             <div class="music-name" id="music-name">— sin pista —</div>
+          </div>
+        </div>
+        <div class="setting-row">
+          <div class="label">Copia de seguridad <small>Guarda tu progreso, galería y ajustes en un archivo</small></div>
+          <div class="mb-row" style="display:flex;gap:.5rem;flex-wrap:wrap">
+            <button class="btn small ghost" onclick="exportBackup()">DESCARGAR COPIA</button>
+            <button class="btn small ghost" onclick="triggerImportBackup()">RESTAURAR COPIA</button>
+            <input type="file" id="backup-restore-input" accept="application/json" style="display:none"
+              onchange="importBackupFile(this.files[0]); this.value='';">
           </div>
         </div>
         <div class="setting-row" style="border-bottom:none">
